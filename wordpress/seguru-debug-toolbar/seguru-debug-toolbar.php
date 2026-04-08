@@ -3,7 +3,7 @@
  * Plugin Name:  Seguru Debug Toolbar
  * Plugin URI:   https://github.com/seguru-digital/seguru-debug-toolbar
  * Description:  Visual overlay for data-ref element labels. Shows section references on the front end for admins — useful for QA, revision feedback, and bug reporting.
- * Version:      1.1.1
+ * Version:      1.2.0
  * Author:       Seguru Digital
  * Author URI:   https://seguru.digital
  * License:      MIT
@@ -19,7 +19,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 // ── Constants ─────────────────────────────────────────────────
-define( 'SDT_VERSION', '1.1.1' );
+define( 'SDT_VERSION', '1.2.0' );
 define( 'SDT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SDT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SDT_OPTION_GROUP', 'sdt_settings' );

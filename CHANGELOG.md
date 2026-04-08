@@ -6,6 +6,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ---
 
+## [1.2.0] — 2026-04-08
+
+### Added
+
+- **Auto-ref depth setting** — three levels control how deep auto-ref scans the page:
+  - **Section** — top-level page sections only (default, existing behaviour)
+  - **Block** — sections + inner containers, columns, widgets, Gutenberg blocks
+  - **Element** — everything: headings, paragraphs, buttons, images, lists, and more
+- Element depth skips the nesting exclusion check so nested elements all get labels. Useful for debugging specific components.
+- New WP setting: auto-ref depth radio group under the Page Builders card.
+- New `sdtConfig.autoRefDepth` property (`'section'` | `'block'` | `'element'`).
+
+### Changed
+
+- **Shadow DOM isolation** — toolbar and toast now render inside a shadow root, preventing Elementor Pro and other page builder CSS from leaking in.
+- Labels in the page DOM use `all: initial` resets to override inherited builder styles.
+- Dark mode uses `:host-context(html.dark)` to read the class from outside the shadow boundary.
+- Minimum PHP requirement updated to 8.1.
+
+---
+
 ## [1.1.1] — 2026-04-08
 
 ### Fixed
