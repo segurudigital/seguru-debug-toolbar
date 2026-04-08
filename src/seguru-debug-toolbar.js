@@ -518,8 +518,7 @@
 
   // Selector tiers for auto-ref depth levels
   var SELECTORS_SECTION = [
-    // Elementor (flexbox containers + legacy sections)
-    '.elementor-section',
+    // Elementor (modern flexbox containers)
     '.e-con:not(.e-con .e-con)',        // top-level containers only
     // Bricks
     'section.brxe-section',
@@ -537,7 +536,6 @@
 
   var SELECTORS_BLOCK = SELECTORS_SECTION.concat([
     // Elementor — nested containers + all widgets
-    '.elementor-column', '.elementor-widget-wrap',
     '.e-con .e-con',
     '[class*="elementor-widget-"]',
     // Bricks inner blocks
