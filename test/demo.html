@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seguru Debug Toolbar — Demo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1F2937; line-height: 1.6; }
+    section { position: relative; padding: 60px 40px; }
+    h1, h2, h3 { margin-bottom: 12px; }
+    p { max-width: 600px; color: #6B7280; }
+    .hero { background: #F0F9FF; border-bottom: 1px solid #E0F2FE; }
+    .features { background: #fff; border-bottom: 1px solid #E5E7EB; }
+    .testimonials { background: #FFFBEB; border-bottom: 1px solid #FEF3C7; }
+    .cta { background: #F0FDF4; border-bottom: 1px solid #DCFCE7; }
+    .footer { background: #111827; color: #9CA3AF; padding: 40px; }
+    .footer p { color: #6B7280; }
+    .toggle-dark { position: fixed; top: 20px; right: 20px; padding: 8px 14px; background: #374151; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; z-index: 100002; }
+    .demo-controls { position: fixed; top: 60px; right: 20px; background: #fff; border: 1px solid #E5E7EB; border-radius: 6px; padding: 12px; font-size: 12px; z-index: 100002; display: flex; flex-direction: column; gap: 8px; }
+    .demo-controls label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+    .demo-controls h3 { font-size: 11px; text-transform: uppercase; color: #9CA3AF; letter-spacing: 0.5px; margin: 0; }
+    hr.demo-sep { border: none; border-top: 1px solid #E5E7EB; margin: 4px 0; }
+    .class-converter-section { background: #FDF4FF; border-bottom: 1px solid #F5D0FE; }
+    .auto-ref-section { background: #FFF7ED; border-bottom: 1px solid #FED7AA; }
+  </style>
+</head>
+<body>
+
+  <button class="toggle-dark" onclick="document.documentElement.classList.toggle('dark'); this.textContent = document.documentElement.classList.contains('dark') ? 'Light mode' : 'Dark mode'">Dark mode</button>
+
+  <!-- Demo controls to toggle features -->
+  <div class="demo-controls">
+    <h3>Feature Flags</h3>
+    <label><input type="checkbox" id="toggle-cc"> Class Converter</label>
+    <label><input type="checkbox" id="toggle-ar"> Auto-Ref</label>
+    <hr class="demo-sep">
+    <button onclick="location.reload()" style="padding:4px 8px;font-size:11px;cursor:pointer;border:1px solid #D1D5DB;border-radius:3px;background:#fff;">Reload</button>
+  </div>
+
+  <!-- ─── Standard: explicit data-ref attributes ─── -->
+  <section class="hero" data-ref="home-01-hero-standard">
+    <h1>Seguru Debug Toolbar Demo</h1>
+    <p>This section has an explicit <code>data-ref</code> attribute. It always shows up regardless of feature flags.</p>
+  </section>
+
+  <section class="features" data-ref="home-02-features-grid">
+    <h2>Features (explicit data-ref)</h2>
+    <p>Press L to cycle through Icons, Off, and Full modes. Click any label to copy the data-ref value.</p>
+  </section>
+
+  <!-- ─── Class Converter test: dataref- CSS class, no data-ref attr ─── -->
+  <section class="class-converter-section dataref-home-03-testimonials">
+    <h2>Testimonials (class converter)</h2>
+    <p>This section has the CSS class <code>dataref-home-03-testimonials</code> but no <code>data-ref</code> attribute. When the class converter is on, the toolbar converts the class to <code>data-ref="home-03-testimonials"</code>.</p>
+  </section>
+
+  <!-- ─── Auto-Ref test: plain section with no data-ref and no dataref- class ─── -->
+  <section class="auto-ref-section">
+    <h2>CTA (auto-ref candidate)</h2>
+    <p>This section has no <code>data-ref</code> attribute and no <code>dataref-</code> class. When auto-ref is on, it should get an auto-generated label based on the page slug and position.</p>
+  </section>
+
+  <!-- ─── Mixed: explicit data-ref + auto-ref should skip it ─── -->
+  <section class="cta" data-ref="home-07-cta-banner">
+    <h2>Call to Action (explicit — auto-ref skips)</h2>
+    <p>This section has an explicit <code>data-ref</code>. Auto-ref should count it in the sequence but not overwrite the value.</p>
+  </section>
+
+  <footer class="footer" data-ref="home-08-footer">
+    <p>Footer section. Toggle dark mode with the button in the top-right corner to test the toolbar's dark theme.</p>
+  </footer>
+
+  <script>
+    // Read feature flag checkboxes and set sdtConfig before the toolbar loads
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var cc = params.get('cc') === '1';
+      var ar = params.get('ar') === '1';
+
+      window.sdtConfig = {
+        classConverter: cc ? '1' : '0',
+        autoRef: ar ? '1' : '0'
+      };
+
+      // Sync checkboxes after DOM loads
+      document.addEventListener('DOMContentLoaded', function () {
+        document.getElementById('toggle-cc').checked = cc;
+        document.getElementById('toggle-ar').checked = ar;
+
+        // Update URL params on change
+        document.getElementById('toggle-cc').addEventListener('change', function () {
+          params.set('cc', this.checked ? '1' : '0');
+          window.location.search = params.toString();
+        });
+        document.getElementById('toggle-ar').addEventListener('change', function () {
+          params.set('ar', this.checked ? '1' : '0');
+          window.location.search = params.toString();
+        });
+      });
+    })();
+  </script>
+  <script src="../src/seguru-debug-toolbar.js"></script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+{
+  "name": "seguru-debug-toolbar",
+  "version": "1.1.0",
+  "description": "Visual overlay for data-ref element labels. Three modes (Off, Icons, Full), keyboard shortcut, click-to-copy. Works in static HTML, Vite/Webpack builds, and WordPress.",
+  "main": "dist/seguru-debug-toolbar.min.js",
+  "module": "src/seguru-debug-toolbar.js",
+  "files": [
+    "src/",
+    "dist/",
+    "wordpress/"
+  ],
+  "scripts": {
+    "build": "esbuild src/seguru-debug-toolbar.js --bundle --minify --outfile=dist/seguru-debug-toolbar.min.js --format=iife",
+    "build:wp": "bash scripts/build-wp-zip.sh",
+    "dev": "esbuild src/seguru-debug-toolbar.js --bundle --outfile=dist/seguru-debug-toolbar.js --format=iife --watch"
+  },
+  "keywords": [
+    "debug",
+    "toolbar",
+    "data-ref",
+    "wireframe",
+    "overlay",
+    "qa",
+    "wordpress"
+  ],
+  "author": "Seguru Digital <hello@seguru.digital>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/seguru-digital/seguru-debug-toolbar.git"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0"
+  }
+}
