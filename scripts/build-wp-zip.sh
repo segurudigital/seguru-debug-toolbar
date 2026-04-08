@@ -8,7 +8,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 DIST_DIR="$ROOT_DIR/dist"
 TMP_DIR=$(mktemp -d)
-ZIP_NAME="seguru-debug-toolbar-wp.zip"
+VERSION=$(node -p "require('$ROOT_DIR/package.json').version")
+ZIP_NAME="seguru-debug-toolbar-wp-v${VERSION}.zip"
 
 # Set up temp directory
 mkdir -p "$TMP_DIR/seguru-debug-toolbar/assets"
@@ -29,8 +30,8 @@ Contributors: segurudigital
 Tags: debug, data-ref, overlay, qa, wireframe, developer tools
 Requires at least: 5.8
 Tested up to: 6.7
-Requires PHP: 7.4
-Stable tag: 1.0.0
+Requires PHP: 8.3
+Stable tag: __VERSION__
 License: MIT
 License URI: https://opensource.org/licenses/MIT
 
@@ -117,6 +118,9 @@ No. The entire plugin is a single 10 KB JavaScript file that only loads for auth
 * Elementor Pro, Bricks Builder, and Oxygen Builder support documented
 * Elementor Free workaround via CSS class-to-attribute snippet
 EOF
+
+# Inject version into readme.txt
+sed -i '' "s/__VERSION__/${VERSION}/" "$TMP_DIR/seguru-debug-toolbar/readme.txt"
 
 # Create the zip
 cd "$TMP_DIR"

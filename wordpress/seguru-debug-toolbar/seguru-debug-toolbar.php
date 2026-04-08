@@ -8,7 +8,7 @@
  * Author URI:   https://seguru.digital
  * License:      MIT
  * License URI:  https://opensource.org/licenses/MIT
- * Requires PHP: 7.4
+ * Requires PHP: 8.3
  * Requires at least: 5.8
  * Tested up to: 6.7
  *
