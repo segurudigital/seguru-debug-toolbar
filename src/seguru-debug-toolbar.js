@@ -533,7 +533,8 @@
       if (!el.getAttribute('data-ref')) {
         var num = String(i + 1);
         if (num.length < 2) num = '0' + num;
-        el.setAttribute('data-ref', slug + '-' + num);
+        var tag = el.tagName.toLowerCase();
+        el.setAttribute('data-ref', slug + '-' + num + '-' + tag);
       }
     }
   }
