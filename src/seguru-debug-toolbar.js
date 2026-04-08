@@ -332,7 +332,7 @@
     '  font-family: ' + FONT_UI + ';',
     '  font-size: 0.625rem;',
     '  color: #D1D5DB;',
-    '  border-top: 1px solid #F3F4F6;',
+    '  border-bottom: 1px solid #F3F4F6;',
     '}',
 
     // --- Badge zone ---
@@ -386,7 +386,7 @@
     ':host-context(html.dark) .sdt-toolbar__option { color: #D1D5DB; }',
     ':host-context(html.dark) .sdt-toolbar__option:hover { background: #3F3F46; }',
     ':host-context(html.dark) .sdt-toolbar__option--active { background: rgba(' + ACCENT + ', 0.12); }',
-    ':host-context(html.dark) .sdt-toolbar__hint { border-top-color: #3F3F46; }',
+    ':host-context(html.dark) .sdt-toolbar__hint { border-bottom-color: #3F3F46; }',
     ':host-context(html.dark) .sdt-toolbar__badge { border-right-color: #3F3F46; }',
     ':host-context(html.dark) .sdt-toolbar__badge:hover { background: #3F3F46; }',
     ':host-context(html.dark) .sdt-toolbar__badge-tip { color: #B1B3B6; }',
@@ -443,16 +443,16 @@
         initModeLabel + ' <span class="sdt-toolbar__caret">&#9662;</span>' +
       '</button>' +
       '<div class="sdt-toolbar__dropdown" data-sdt-menu="mode">' +
-        '<button class="sdt-toolbar__option' + (state === 1 ? ' sdt-toolbar__option--active' : '') + '" data-sdt-state="1">' +
-          '<span class="sdt-toolbar__option-dot"></span> Off' +
+        '<div class="sdt-toolbar__hint">Press L to cycle</div>' +
+        '<button class="sdt-toolbar__option' + (state === 2 ? ' sdt-toolbar__option--active' : '') + '" data-sdt-state="2">' +
+          '<span class="sdt-toolbar__option-dot"></span> Full' +
         '</button>' +
         '<button class="sdt-toolbar__option' + (state === 0 ? ' sdt-toolbar__option--active' : '') + '" data-sdt-state="0">' +
           '<span class="sdt-toolbar__option-dot"></span> Icons' +
         '</button>' +
-        '<button class="sdt-toolbar__option' + (state === 2 ? ' sdt-toolbar__option--active' : '') + '" data-sdt-state="2">' +
-          '<span class="sdt-toolbar__option-dot"></span> Full' +
+        '<button class="sdt-toolbar__option' + (state === 1 ? ' sdt-toolbar__option--active' : '') + '" data-sdt-state="1">' +
+          '<span class="sdt-toolbar__option-dot"></span> Off' +
         '</button>' +
-        '<div class="sdt-toolbar__hint">Press L to cycle</div>' +
       '</div>' +
     '</div>' +
     // ── Depth dropdown ──
@@ -462,19 +462,19 @@
         initDepthLabel + ' <span class="sdt-toolbar__caret">&#9662;</span>' +
       '</button>' +
       '<div class="sdt-toolbar__dropdown" data-sdt-menu="depth">' +
-        '<button class="sdt-toolbar__option' + (!autoRefEnabled ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="off">' +
-          '<span class="sdt-toolbar__option-dot"></span> Off — manual labels only' +
-        '</button>' +
-        '<button class="sdt-toolbar__option' + (autoRefEnabled && autoRefDepth === 'section' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="section">' +
-          '<span class="sdt-toolbar__option-dot"></span> Sections — top-level page sections' +
+        '<div class="sdt-toolbar__hint">Press D to cycle</div>' +
+        '<button class="sdt-toolbar__option' + (autoRefEnabled && autoRefDepth === 'element' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="element">' +
+          '<span class="sdt-toolbar__option-dot"></span> Elements — headings, text, images, buttons' +
         '</button>' +
         '<button class="sdt-toolbar__option' + (autoRefEnabled && autoRefDepth === 'block' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="block">' +
           '<span class="sdt-toolbar__option-dot"></span> Blocks — sections + containers' +
         '</button>' +
-        '<button class="sdt-toolbar__option' + (autoRefEnabled && autoRefDepth === 'element' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="element">' +
-          '<span class="sdt-toolbar__option-dot"></span> Elements — headings, text, images, buttons' +
+        '<button class="sdt-toolbar__option' + (autoRefEnabled && autoRefDepth === 'section' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="section">' +
+          '<span class="sdt-toolbar__option-dot"></span> Sections — top-level page sections' +
         '</button>' +
-        '<div class="sdt-toolbar__hint">Press D to cycle</div>' +
+        '<button class="sdt-toolbar__option' + (!autoRefEnabled ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="off">' +
+          '<span class="sdt-toolbar__option-dot"></span> Off — manual labels only' +
+        '</button>' +
       '</div>' +
     '</div>';
 
