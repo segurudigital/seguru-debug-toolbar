@@ -163,6 +163,12 @@ npm run dev         # → watch mode with auto-rebuild
 
 ---
 
+## Support
+
+We open-source the tools we build for our own workflow. If they save you time, consider supporting us at [buymeacoffee.com/segurudigital](https://buymeacoffee.com/segurudigital) — it keeps the tools free and funds pro-bono work for nonprofits.
+
+---
+
 ## Contributing
 
 Found a bug or want to add something? Open an issue or submit a PR. We're a small team so we'll review things as fast as we can.
