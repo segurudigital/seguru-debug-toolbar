@@ -197,7 +197,7 @@
     '  font-family: ' + FONT_UI + ';',
     '  font-size: 0.75rem;',
     '  line-height: 1.5;',
-    '  overflow: hidden;',
+    '  overflow: visible;',
     '  user-select: none;',
     '  pointer-events: auto;',
     '}',
@@ -210,7 +210,6 @@
     '  font-family: ' + FONT_UI + ';',
     '  font-weight: 600;',
     '  color: #9CA3AF;',
-    '  border-right: 1px solid #E5E7EB;',
     '  white-space: nowrap;',
     '  letter-spacing: 0.3px;',
     '  text-transform: uppercase;',
@@ -218,48 +217,95 @@
     '  line-height: 1.5;',
     '}',
 
-    '.sdt-toolbar__states {',
+    // --- Dropdown trigger ---
+    '.sdt-toolbar__group {',
     '  all: initial;',
     '  box-sizing: border-box;',
     '  display: flex;',
-    '  align-items: stretch;',
-    '  gap: 0;',
+    '  align-items: center;',
+    '  position: relative;',
+    '  border-right: 1px solid #E5E7EB;',
     '}',
 
-    '.sdt-toolbar__btn {',
+    '.sdt-toolbar__group:last-child { border-right: none; }',
+
+    '.sdt-toolbar__select {',
     '  all: initial;',
     '  box-sizing: border-box;',
     '  display: flex;',
     '  align-items: center;',
     '  gap: 4px;',
-    '  padding: 8px 12px;',
+    '  padding: 8px 10px;',
     '  background: transparent;',
     '  border: none;',
     '  cursor: pointer;',
     '  font-family: ' + FONT_UI + ';',
     '  font-size: 0.75rem;',
-    '  font-weight: 500;',
-    '  color: #9CA3AF;',
+    '  font-weight: 600;',
+    '  color: ' + ACCENT_HEX + ';',
     '  white-space: nowrap;',
     '  line-height: 1.5;',
-    '  transition: background 0.1s, color 0.1s;',
-    '  border-right: 1px solid #E5E7EB;',
+    '  transition: background 0.1s;',
     '}',
 
-    '.sdt-toolbar__btn:last-child { border-right: none; }',
+    '.sdt-toolbar__select:hover { background: #F9FAFB; }',
 
-    '.sdt-toolbar__btn:hover {',
-    '  background: #F9FAFB;',
+    '.sdt-toolbar__caret {',
+    '  all: initial;',
+    '  font-size: 8px;',
+    '  color: #9CA3AF;',
+    '  margin-left: 2px;',
+    '}',
+
+    // --- Dropdown menu ---
+    '.sdt-toolbar__dropdown {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: none;',
+    '  position: absolute;',
+    '  bottom: calc(100% + 6px);',
+    '  left: 0;',
+    '  background: #fff;',
+    '  border: 1px solid #E5E7EB;',
+    '  border-radius: 6px;',
+    '  box-shadow: 0 4px 12px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08);',
+    '  overflow: hidden;',
+    '  min-width: 140px;',
+    '  z-index: 100002;',
+    '  font-family: ' + FONT_UI + ';',
+    '}',
+
+    '.sdt-toolbar__dropdown--open { display: block; }',
+
+    '.sdt-toolbar__option {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: flex;',
+    '  align-items: center;',
+    '  gap: 6px;',
+    '  width: 100%;',
+    '  padding: 7px 12px;',
+    '  background: transparent;',
+    '  border: none;',
+    '  cursor: pointer;',
+    '  font-family: ' + FONT_UI + ';',
+    '  font-size: 0.75rem;',
+    '  font-weight: 400;',
     '  color: #374151;',
+    '  white-space: nowrap;',
+    '  line-height: 1.5;',
+    '  transition: background 0.1s;',
     '}',
 
-    '.sdt-toolbar__btn--active {',
-    '  background: ' + ACCENT_WASH + ';',
+    '.sdt-toolbar__option:hover { background: #F9FAFB; }',
+
+    '.sdt-toolbar__option--active {',
     '  color: ' + ACCENT_HEX + ';',
     '  font-weight: 600;',
+    '  background: ' + ACCENT_WASH + ';',
     '}',
 
-    '.sdt-toolbar__dot {',
+    '.sdt-toolbar__option-dot {',
     '  all: initial;',
     '  box-sizing: border-box;',
     '  display: block;',
@@ -270,16 +316,18 @@
     '  flex-shrink: 0;',
     '}',
 
-    '.sdt-toolbar__shortcut {',
+    '.sdt-toolbar__hint {',
     '  all: initial;',
     '  box-sizing: border-box;',
+    '  display: block;',
+    '  padding: 5px 12px;',
     '  font-family: ' + FONT_UI + ';',
     '  font-size: 0.625rem;',
     '  color: #D1D5DB;',
-    '  margin-left: 2px;',
+    '  border-top: 1px solid #F3F4F6;',
     '}',
 
-    // --- Badge zone (Seguru S mark + powered-by tooltip) ---
+    // --- Badge zone ---
     '.sdt-toolbar__badge {',
     '  all: initial;',
     '  box-sizing: border-box;',
@@ -294,9 +342,7 @@
     '  align-self: stretch;',
     '}',
 
-    '.sdt-toolbar__badge:hover {',
-    '  background: #F9FAFB;',
-    '}',
+    '.sdt-toolbar__badge:hover { background: #F9FAFB; }',
 
     '.sdt-toolbar__badge-tip {',
     '  all: initial;',
@@ -324,30 +370,15 @@
     '  transform: translateX(-50%) translateY(0);',
     '}',
 
-    // --- Separator between button groups ---
-    '.sdt-toolbar__sep {',
-    '  all: initial;',
-    '  box-sizing: border-box;',
-    '  display: block;',
-    '  width: 1px;',
-    '  align-self: stretch;',
-    '  background: #E5E7EB;',
-    '  flex-shrink: 0;',
-    '}',
-
-    ':host-context(html.dark) .sdt-toolbar__sep { background: #3F3F46; }',
-
-    // --- Dark mode (uses :host-context to read html.dark from outside shadow) ---
-    ':host-context(html.dark) .sdt-toolbar {',
-    '  background: #27272A;',
-    '  border-color: #3F3F46;',
-    '}',
-    ':host-context(html.dark) .sdt-toolbar__label { border-right-color: #3F3F46; }',
-    ':host-context(html.dark) .sdt-toolbar__btn { border-right-color: #3F3F46; }',
-    ':host-context(html.dark) .sdt-toolbar__btn:hover { background: #3F3F46; }',
-    ':host-context(html.dark) .sdt-toolbar__btn--active {',
-    '  background: rgba(' + ACCENT + ', 0.12);',
-    '}',
+    // --- Dark mode ---
+    ':host-context(html.dark) .sdt-toolbar { background: #27272A; border-color: #3F3F46; }',
+    ':host-context(html.dark) .sdt-toolbar__group { border-right-color: #3F3F46; }',
+    ':host-context(html.dark) .sdt-toolbar__select:hover { background: #3F3F46; }',
+    ':host-context(html.dark) .sdt-toolbar__dropdown { background: #27272A; border-color: #3F3F46; }',
+    ':host-context(html.dark) .sdt-toolbar__option { color: #D1D5DB; }',
+    ':host-context(html.dark) .sdt-toolbar__option:hover { background: #3F3F46; }',
+    ':host-context(html.dark) .sdt-toolbar__option--active { background: rgba(' + ACCENT + ', 0.12); }',
+    ':host-context(html.dark) .sdt-toolbar__hint { border-top-color: #3F3F46; }',
     ':host-context(html.dark) .sdt-toolbar__badge { border-right-color: #3F3F46; }',
     ':host-context(html.dark) .sdt-toolbar__badge:hover { background: #3F3F46; }',
     ':host-context(html.dark) .sdt-toolbar__badge-tip { color: #B1B3B6; }',
@@ -381,6 +412,12 @@
   ].join('\n');
 
 
+  // ─── Mode + depth display labels ─────────────────────────────
+  var MODE_LABELS = { 0: 'Icons', 1: 'Off', 2: 'Full' };
+  var DEPTH_LABELS = { 'off': 'Off', 'section': 'Sections', 'block': 'Blocks', 'element': 'Elements' };
+  var initModeLabel = MODE_LABELS[state] || 'Icons';
+  var initDepthLabel = autoRefEnabled ? (DEPTH_LABELS[autoRefDepth] || 'Sections') : 'Off';
+
   // ─── Build toolbar DOM ──────────────────────────────────────
   var toolbar = document.createElement('div');
   toolbar.className = 'sdt-toolbar';
@@ -391,35 +428,46 @@
       S_MARK_SVG +
       '<span class="sdt-toolbar__badge-tip">Powered by Seguru Digital</span>' +
     '</a>' +
-    '<div class="sdt-toolbar__label">data-ref</div>' +
-    '<div class="sdt-toolbar__states">' +
-      '<button class="sdt-toolbar__btn' + (state === 0 ? ' sdt-toolbar__btn--active' : '') + '" data-sdt-state="0" title="Hover icons to reveal labels">' +
-        '<span class="sdt-toolbar__dot"></span> Icons' +
+    // ── Mode dropdown ──
+    '<div class="sdt-toolbar__group" data-sdt-group="mode">' +
+      '<div class="sdt-toolbar__label">Labels</div>' +
+      '<button class="sdt-toolbar__select" data-sdt-toggle="mode">' +
+        initModeLabel + ' <span class="sdt-toolbar__caret">&#9662;</span>' +
       '</button>' +
-      '<button class="sdt-toolbar__btn' + (state === 1 ? ' sdt-toolbar__btn--active' : '') + '" data-sdt-state="1" title="Hide all labels">' +
-        '<span class="sdt-toolbar__dot"></span> Off' +
-      '</button>' +
-      '<button class="sdt-toolbar__btn' + (state === 2 ? ' sdt-toolbar__btn--active' : '') + '" data-sdt-state="2" title="Show all labels permanently">' +
-        '<span class="sdt-toolbar__dot"></span> Full' +
-        ' <span class="sdt-toolbar__shortcut">[L]</span>' +
-      '</button>' +
+      '<div class="sdt-toolbar__dropdown" data-sdt-menu="mode">' +
+        '<button class="sdt-toolbar__option' + (state === 0 ? ' sdt-toolbar__option--active' : '') + '" data-sdt-state="0">' +
+          '<span class="sdt-toolbar__option-dot"></span> Icons' +
+        '</button>' +
+        '<button class="sdt-toolbar__option' + (state === 1 ? ' sdt-toolbar__option--active' : '') + '" data-sdt-state="1">' +
+          '<span class="sdt-toolbar__option-dot"></span> Off' +
+        '</button>' +
+        '<button class="sdt-toolbar__option' + (state === 2 ? ' sdt-toolbar__option--active' : '') + '" data-sdt-state="2">' +
+          '<span class="sdt-toolbar__option-dot"></span> Full' +
+        '</button>' +
+        '<div class="sdt-toolbar__hint">Press L to cycle</div>' +
+      '</div>' +
     '</div>' +
-    '<div class="sdt-toolbar__sep"></div>' +
-    '<div class="sdt-toolbar__label">depth</div>' +
-    '<div class="sdt-toolbar__states">' +
-      '<button class="sdt-toolbar__btn' + (!autoRefEnabled ? ' sdt-toolbar__btn--active' : '') + '" data-sdt-depth="off" title="Manual labels only — no auto-ref">' +
-        '<span class="sdt-toolbar__dot"></span> Off' +
+    // ── Depth dropdown ──
+    '<div class="sdt-toolbar__group" data-sdt-group="depth">' +
+      '<div class="sdt-toolbar__label">Depth</div>' +
+      '<button class="sdt-toolbar__select" data-sdt-toggle="depth">' +
+        initDepthLabel + ' <span class="sdt-toolbar__caret">&#9662;</span>' +
       '</button>' +
-      '<button class="sdt-toolbar__btn' + (autoRefEnabled && autoRefDepth === 'section' ? ' sdt-toolbar__btn--active' : '') + '" data-sdt-depth="section" title="Auto-ref: top-level sections">' +
-        '<span class="sdt-toolbar__dot"></span> Sec' +
-      '</button>' +
-      '<button class="sdt-toolbar__btn' + (autoRefEnabled && autoRefDepth === 'block' ? ' sdt-toolbar__btn--active' : '') + '" data-sdt-depth="block" title="Auto-ref: sections + containers">' +
-        '<span class="sdt-toolbar__dot"></span> Blk' +
-      '</button>' +
-      '<button class="sdt-toolbar__btn' + (autoRefEnabled && autoRefDepth === 'element' ? ' sdt-toolbar__btn--active' : '') + '" data-sdt-depth="element" title="Auto-ref: all semantic elements">' +
-        '<span class="sdt-toolbar__dot"></span> Elem' +
-        ' <span class="sdt-toolbar__shortcut">[D]</span>' +
-      '</button>' +
+      '<div class="sdt-toolbar__dropdown" data-sdt-menu="depth">' +
+        '<button class="sdt-toolbar__option' + (!autoRefEnabled ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="off">' +
+          '<span class="sdt-toolbar__option-dot"></span> Off — manual labels only' +
+        '</button>' +
+        '<button class="sdt-toolbar__option' + (autoRefEnabled && autoRefDepth === 'section' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="section">' +
+          '<span class="sdt-toolbar__option-dot"></span> Sections — top-level page sections' +
+        '</button>' +
+        '<button class="sdt-toolbar__option' + (autoRefEnabled && autoRefDepth === 'block' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="block">' +
+          '<span class="sdt-toolbar__option-dot"></span> Blocks — sections + containers' +
+        '</button>' +
+        '<button class="sdt-toolbar__option' + (autoRefEnabled && autoRefDepth === 'element' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="element">' +
+          '<span class="sdt-toolbar__option-dot"></span> Elements — headings, text, images, buttons' +
+        '</button>' +
+        '<div class="sdt-toolbar__hint">Press D to cycle</div>' +
+      '</div>' +
     '</div>';
 
 
@@ -647,14 +695,7 @@
     }
     injectLabels();
 
-    // Update active depth button
-    var depthBtns = toolbar.querySelectorAll('[data-sdt-depth]');
-    depthBtns.forEach(function (btn) {
-      var btnDepth = btn.getAttribute('data-sdt-depth');
-      var isActive = (newDepth === 'off' && btnDepth === 'off') ||
-                     (autoRefEnabled && btnDepth === autoRefDepth);
-      btn.classList.toggle('sdt-toolbar__btn--active', isActive);
-    });
+    updateDropdown('depth', 'data-sdt-depth', newDepth, DEPTH_LABELS[newDepth]);
   }
 
 
@@ -734,6 +775,35 @@
   }
 
 
+  // ─── Dropdown helpers ────────────────────────────────────────
+  function closeAllDropdowns() {
+    var menus = toolbar.querySelectorAll('.sdt-toolbar__dropdown');
+    menus.forEach(function (m) { m.classList.remove('sdt-toolbar__dropdown--open'); });
+  }
+
+  function toggleDropdown(name) {
+    var menu = toolbar.querySelector('[data-sdt-menu="' + name + '"]');
+    var isOpen = menu.classList.contains('sdt-toolbar__dropdown--open');
+    closeAllDropdowns();
+    if (!isOpen) menu.classList.add('sdt-toolbar__dropdown--open');
+  }
+
+  function updateDropdown(name, activeAttr, activeValue, label) {
+    // Update trigger text
+    var trigger = toolbar.querySelector('[data-sdt-toggle="' + name + '"]');
+    trigger.innerHTML = label + ' <span class="sdt-toolbar__caret">&#9662;</span>';
+
+    // Update active option
+    var opts = toolbar.querySelectorAll('[data-sdt-menu="' + name + '"] .sdt-toolbar__option');
+    opts.forEach(function (opt) {
+      opt.classList.toggle('sdt-toolbar__option--active',
+        opt.getAttribute(activeAttr) === String(activeValue));
+    });
+
+    closeAllDropdowns();
+  }
+
+
   // ─── State management ───────────────────────────────────────
   function setState(newState) {
     state = newState;
@@ -745,12 +815,7 @@
       document.body.classList.add('sdt-full');
     }
 
-    // Update active button
-    var buttons = toolbar.querySelectorAll('[data-sdt-state]');
-    buttons.forEach(function (btn) {
-      var btnState = parseInt(btn.getAttribute('data-sdt-state'), 10);
-      btn.classList.toggle('sdt-toolbar__btn--active', btnState === state);
-    });
+    updateDropdown('mode', 'data-sdt-state', state, MODE_LABELS[state]);
   }
 
 
@@ -773,24 +838,43 @@
     // Apply initial state (may differ from 0 if configured via WP)
     if (state !== 0) setState(state);
 
-    // Mode button clicks
-    var buttons = toolbar.querySelectorAll('[data-sdt-state]');
-    buttons.forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        setState(parseInt(btn.getAttribute('data-sdt-state'), 10));
+    // Dropdown toggle clicks
+    toolbar.querySelectorAll('[data-sdt-toggle]').forEach(function (trigger) {
+      trigger.addEventListener('click', function (e) {
+        e.stopPropagation();
+        toggleDropdown(trigger.getAttribute('data-sdt-toggle'));
       });
     });
 
-    // Depth button clicks
-    var depthBtns = toolbar.querySelectorAll('[data-sdt-depth]');
-    depthBtns.forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        setDepth(btn.getAttribute('data-sdt-depth'));
+    // Mode option clicks
+    toolbar.querySelectorAll('[data-sdt-state]').forEach(function (opt) {
+      opt.addEventListener('click', function () {
+        setState(parseInt(opt.getAttribute('data-sdt-state'), 10));
       });
     });
 
-    // Keyboard shortcuts: L cycles modes, D cycles depth
+    // Depth option clicks
+    toolbar.querySelectorAll('[data-sdt-depth]').forEach(function (opt) {
+      opt.addEventListener('click', function () {
+        setDepth(opt.getAttribute('data-sdt-depth'));
+      });
+    });
+
+    // Close dropdowns on click outside (shadow root)
+    shadow.addEventListener('click', function (e) {
+      if (!e.target.closest('[data-sdt-toggle]') && !e.target.closest('.sdt-toolbar__dropdown')) {
+        closeAllDropdowns();
+      }
+    });
+
+    // Close dropdowns on click outside (main document)
+    document.addEventListener('click', function () {
+      closeAllDropdowns();
+    });
+
+    // Keyboard shortcuts: L cycles modes, D cycles depth, Escape closes dropdowns
     document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { closeAllDropdowns(); return; }
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.isContentEditable) return;
       if (e.key === 'l' || e.key === 'L') {
         setState((state + 1) % 3);
