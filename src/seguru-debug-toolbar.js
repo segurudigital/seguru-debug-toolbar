@@ -324,6 +324,19 @@
     '  transform: translateX(-50%) translateY(0);',
     '}',
 
+    // --- Separator between button groups ---
+    '.sdt-toolbar__sep {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: block;',
+    '  width: 1px;',
+    '  align-self: stretch;',
+    '  background: #E5E7EB;',
+    '  flex-shrink: 0;',
+    '}',
+
+    ':host-context(html.dark) .sdt-toolbar__sep { background: #3F3F46; }',
+
     // --- Dark mode (uses :host-context to read html.dark from outside shadow) ---
     ':host-context(html.dark) .sdt-toolbar {',
     '  background: #27272A;',
@@ -389,6 +402,23 @@
       '<button class="sdt-toolbar__btn' + (state === 2 ? ' sdt-toolbar__btn--active' : '') + '" data-sdt-state="2" title="Show all labels permanently">' +
         '<span class="sdt-toolbar__dot"></span> Full' +
         ' <span class="sdt-toolbar__shortcut">[L]</span>' +
+      '</button>' +
+    '</div>' +
+    '<div class="sdt-toolbar__sep"></div>' +
+    '<div class="sdt-toolbar__label">depth</div>' +
+    '<div class="sdt-toolbar__states">' +
+      '<button class="sdt-toolbar__btn' + (!autoRefEnabled ? ' sdt-toolbar__btn--active' : '') + '" data-sdt-depth="off" title="Manual labels only — no auto-ref">' +
+        '<span class="sdt-toolbar__dot"></span> Off' +
+      '</button>' +
+      '<button class="sdt-toolbar__btn' + (autoRefEnabled && autoRefDepth === 'section' ? ' sdt-toolbar__btn--active' : '') + '" data-sdt-depth="section" title="Auto-ref: top-level sections">' +
+        '<span class="sdt-toolbar__dot"></span> Sec' +
+      '</button>' +
+      '<button class="sdt-toolbar__btn' + (autoRefEnabled && autoRefDepth === 'block' ? ' sdt-toolbar__btn--active' : '') + '" data-sdt-depth="block" title="Auto-ref: sections + containers">' +
+        '<span class="sdt-toolbar__dot"></span> Blk' +
+      '</button>' +
+      '<button class="sdt-toolbar__btn' + (autoRefEnabled && autoRefDepth === 'element' ? ' sdt-toolbar__btn--active' : '') + '" data-sdt-depth="element" title="Auto-ref: all semantic elements">' +
+        '<span class="sdt-toolbar__dot"></span> Elem' +
+        ' <span class="sdt-toolbar__shortcut">[D]</span>' +
       '</button>' +
     '</div>';
 
@@ -578,8 +608,53 @@
         var num = String(i + 1);
         if (num.length < 2) num = '0' + num;
         el.setAttribute('data-ref', slug + '-' + num + '-' + getElementContext(el));
+        el.setAttribute('data-sdt-auto', '1');
       }
     }
+  }
+
+
+  // ─── Clear auto-ref'd labels (for depth switching) ─────────
+  function clearAutoRefs() {
+    var autoEls = document.querySelectorAll('[data-sdt-auto]');
+    autoEls.forEach(function (el) {
+      el.removeAttribute('data-ref');
+      el.removeAttribute('data-sdt-auto');
+      var labels = el.querySelectorAll('.sdt-ref-icon, .sdt-ref-tooltip, .sdt-ref-full-label');
+      labels.forEach(function (label) { label.remove(); });
+      delete el[MARKER];
+    });
+  }
+
+
+  // ─── Depth management ──────────────────────────────────────
+  var DEPTH_CYCLE = ['off', 'section', 'block', 'element'];
+
+  function setDepth(newDepth) {
+    if (newDepth === 'off') {
+      autoRefEnabled = false;
+    } else {
+      autoRefEnabled = true;
+      autoRefDepth = newDepth;
+      AUTO_REF_SELECTORS = (AUTO_REF_DEPTH_MAP[autoRefDepth] || SELECTORS_SECTION).join(', ');
+    }
+
+    // Clear previous auto-refs and rescan
+    clearAutoRefs();
+    if (autoRefEnabled) {
+      convertClassRefs();
+      autoRefSections();
+    }
+    injectLabels();
+
+    // Update active depth button
+    var depthBtns = toolbar.querySelectorAll('[data-sdt-depth]');
+    depthBtns.forEach(function (btn) {
+      var btnDepth = btn.getAttribute('data-sdt-depth');
+      var isActive = (newDepth === 'off' && btnDepth === 'off') ||
+                     (autoRefEnabled && btnDepth === autoRefDepth);
+      btn.classList.toggle('sdt-toolbar__btn--active', isActive);
+    });
   }
 
 
@@ -698,7 +773,7 @@
     // Apply initial state (may differ from 0 if configured via WP)
     if (state !== 0) setState(state);
 
-    // Button clicks
+    // Mode button clicks
     var buttons = toolbar.querySelectorAll('[data-sdt-state]');
     buttons.forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -706,11 +781,24 @@
       });
     });
 
-    // Keyboard shortcut: L cycles through states
+    // Depth button clicks
+    var depthBtns = toolbar.querySelectorAll('[data-sdt-depth]');
+    depthBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        setDepth(btn.getAttribute('data-sdt-depth'));
+      });
+    });
+
+    // Keyboard shortcuts: L cycles modes, D cycles depth
     document.addEventListener('keydown', function (e) {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.isContentEditable) return;
       if (e.key === 'l' || e.key === 'L') {
         setState((state + 1) % 3);
+      }
+      if (e.key === 'd' || e.key === 'D') {
+        var currentIdx = autoRefEnabled ? DEPTH_CYCLE.indexOf(autoRefDepth) : 0;
+        var nextIdx = (currentIdx + 1) % DEPTH_CYCLE.length;
+        setDepth(DEPTH_CYCLE[nextIdx]);
       }
     });
   }
@@ -727,6 +815,8 @@
   window.seguruDebugToolbar = {
     setState: setState,
     getState: function () { return state; },
+    setDepth: setDepth,
+    getDepth: function () { return autoRefEnabled ? autoRefDepth : 'off'; },
     refresh: function () { convertClassRefs(); autoRefSections(); injectLabels(); }
   };
 
