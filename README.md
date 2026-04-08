@@ -2,7 +2,7 @@
 
 A tiny, zero-dependency JavaScript tool that turns `data-ref` attributes into a clickable visual overlay. Built for teams who use wireframes, design systems, or component libraries and need a fast way to identify, reference, and QA page sections.
 
-**~12 KB minified. No CSS file. No build step required. Just drop in a script tag.**
+**~18 KB minified. No CSS file. No build step required. Just drop in a script tag.**
 
 Built and maintained by [Seguru Digital](https://seguru.digital), a strategy-first fractional CMO and CTO practice that also builds. We work across brand strategy, marketing, AI, and dev ops for SMBs in the U.S. and Australia. We use this daily across wireframes, WordPress sites, Shopify themes, and PWAs — and we're open-sourcing it because every dev and design team should have this in their toolkit.
 
@@ -10,13 +10,24 @@ Built and maintained by [Seguru Digital](https://seguru.digital), a strategy-fir
 
 ## What it does
 
-Add `data-ref` attributes to any HTML element. The toolbar gives you three viewing modes, cycled with the **L** key or the toolbar buttons:
+Add `data-ref` attributes to any HTML element. The toolbar gives you two dropdown controls:
+
+**Labels** (press **L** to cycle) — controls how labels appear:
 
 | Mode | What you see |
 |------|-------------|
 | **Icons** | Small dot on each element. Hover to reveal the full label. |
 | **Off** | Clean view. Nothing shown — good for screenshots and client presentations. |
 | **Full** | Always-visible label on every element. Best for QA, cross-referencing copy docs, and revision feedback. |
+
+**Depth** (press **D** to cycle) — controls what gets auto-labelled:
+
+| Depth | What gets labelled |
+|-------|-------------------|
+| **Off** | Only your manual `data-ref` attributes and class-converter labels. |
+| **Sections** | Top-level page sections (Elementor containers, Bricks sections, HTML5 `<section>` tags). |
+| **Blocks** | Sections + inner containers, widgets, and content blocks. |
+| **Elements** | Sections + all semantic HTML (headings, paragraphs, images, buttons, forms, etc.). |
 
 Click any label to copy the `data-ref` value to your clipboard. A toast confirms the copy.
 
@@ -123,16 +134,18 @@ The toolbar only loads for administrators, so regular site visitors never see it
 ## At a glance
 
 - **Zero dependencies** — one self-contained JS file
-- **Self-injecting CSS** — no external stylesheet to link
-- **~12 KB minified** — won't slow anything down
+- **Shadow DOM isolation** — toolbar renders in a shadow root, immune to page/builder CSS
+- **~18 KB minified** — won't slow anything down
 - **Click-to-copy** — click any label, get the ref value on your clipboard
-- **Keyboard shortcut** — press L to cycle modes (skips input fields)
+- **Dropdown controls** — Labels (Icons/Off/Full) and Depth (Off/Sections/Blocks/Elements) as compact dropdown menus
+- **Keyboard shortcuts** — L cycles label modes, D cycles depth levels (skips input fields)
 - **Dark mode** — add `class="dark"` to `<html>` and the toolbar adapts
 - **SPA-friendly** — call `refresh()` after dynamic content loads
 - **WordPress plugin included** — installable zip or mu-plugin, admin-only, dedicated settings page
 - **Class-to-ref converter** — add `dataref-` CSS classes in any page builder (including free tiers) and they become `data-ref` attributes
-- **Auto-ref** — automatically labels page sections based on slug and position, zero manual tagging
-- **Page builder support** — Elementor, Bricks, Oxygen, Breakdance, Gutenberg (docs for each)
+- **Auto-ref with depth control** — three depth levels (Sections/Blocks/Elements) switchable from the toolbar, zero manual tagging
+- **Smart element context** — auto-ref names include widget types (e.g. `home-03-heading` instead of `home-03-div`)
+- **Page builder support** — modern Elementor, Bricks, Oxygen, Breakdance, Gutenberg
 - **Works everywhere** — static HTML, React, Vue, WordPress, Shopify, anything with a DOM
 
 ---

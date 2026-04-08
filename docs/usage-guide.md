@@ -2,9 +2,9 @@
 
 ## How it works
 
-The Seguru Debug Toolbar scans the page for any element with a `data-ref` attribute and attaches visual labels to each one. The toolbar itself appears as a small bar in the bottom-right corner of the page.
+The Seguru Debug Toolbar scans the page for any element with a `data-ref` attribute and attaches visual labels to each one. The toolbar appears as a compact bar in the corner of the page with two dropdown controls.
 
-All styling is injected by the script — there is no external CSS file to link. The toolbar, labels, and toast are all created as DOM elements with inline class names and a single injected `<style>` block.
+The toolbar and toast render inside a **Shadow DOM** — completely isolated from page styles (Elementor, Bricks, theme CSS, etc.). Label elements in the page DOM use `all: initial` resets to prevent inherited styles from leaking in. No external CSS file needed.
 
 ---
 
@@ -30,9 +30,9 @@ The toolbar picks these up automatically on page load. No registration step, no 
 
 ---
 
-## Three modes
+## Label modes
 
-The toolbar cycles through three modes. You can switch using the toolbar buttons or by pressing **L** on your keyboard (the shortcut is disabled when focus is in an input field, textarea, select, or contenteditable element).
+The **Labels** dropdown on the toolbar controls how labels appear. Click it to select a mode, or press **L** to cycle through them (the shortcut is disabled when focus is in an input field, textarea, select, or contenteditable element).
 
 ### Icons (mode 0 — default)
 
@@ -45,6 +45,30 @@ All labels are hidden. The page looks exactly as it would to an end user. Use th
 ### Full (mode 2)
 
 A persistent text label appears at the top-left of every `data-ref` element, showing the full ref value at all times. The labels use a light background and muted text so they're readable without being too distracting. This mode is best for QA passes and cross-referencing against copy documents or wireframes.
+
+---
+
+## Depth control
+
+The **Depth** dropdown controls what gets auto-labelled. Click it to select a level, or press **D** to cycle through them.
+
+### Off
+
+Only manual `data-ref` attributes and class-converter labels are shown. No auto-ref scanning.
+
+### Sections
+
+Auto-ref scans for top-level page sections — Elementor containers (`.e-con`), Bricks sections, Oxygen sections, Breakdance sections, and HTML5 `<section>` tags. Best for high-level QA.
+
+### Blocks
+
+Everything in Sections, plus inner containers, columns, widgets, and content blocks. Shows Elementor widgets, Bricks elements, Gutenberg blocks, etc. Useful for layout debugging.
+
+### Elements
+
+Everything in Sections, plus all semantic HTML — headings (`h1`–`h6`), paragraphs, images, buttons, forms, tables, lists, and builder widgets. The densest view, useful for pinpointing specific elements during debugging.
+
+Auto-generated ref names include element context: `home-03-heading` for an Elementor heading widget, `home-05-h2` for a bare `<h2>`, `home-07-cover` for a Gutenberg cover block.
 
 ---
 
@@ -77,6 +101,27 @@ Returns the current mode as a number (0, 1, or 2).
 ```js
 var mode = window.seguruDebugToolbar.getState();
 console.log(mode); // 0
+```
+
+### setDepth(depth)
+
+Set the auto-ref depth level. Accepts `'off'`, `'section'`, `'block'`, or `'element'`.
+
+```js
+window.seguruDebugToolbar.setDepth('element');  // Label everything
+window.seguruDebugToolbar.setDepth('section');  // Just sections
+window.seguruDebugToolbar.setDepth('off');      // Manual labels only
+```
+
+Switching depth clears previous auto-ref labels and rescans at the new level.
+
+### getDepth()
+
+Returns the current depth level as a string (`'off'`, `'section'`, `'block'`, or `'element'`).
+
+```js
+var depth = window.seguruDebugToolbar.getDepth();
+console.log(depth); // "section"
 ```
 
 ### refresh()
@@ -132,4 +177,4 @@ No polyfills needed. No transpilation needed. The source file is plain ES5-compa
 
 The toolbar does one DOM scan on page load (or when you call `refresh()`) and attaches three small `<span>` elements to each `data-ref` element. On a page with 50 sections, that's 150 extra spans — negligible. The injected `<style>` block handles all show/hide logic via CSS class toggles on `<body>`, so switching modes doesn't trigger any JavaScript DOM walks.
 
-The minified file is under 10 KB. No network requests, no external dependencies, no runtime overhead beyond the initial scan.
+The minified file is ~18 KB. No network requests, no external dependencies, no runtime overhead beyond the initial scan.

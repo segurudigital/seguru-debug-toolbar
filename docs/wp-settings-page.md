@@ -127,7 +127,17 @@ Author is the lowest we go. Subscriber and Customer roles shouldn't see dev tool
 
 **Class-to-ref converter description:** "Converts CSS classes prefixed with `dataref-` into `data-ref` attributes automatically. Add a class like `dataref-home-01-hero` in any page builder and the toolbar picks it up. Works with every builder, including free tiers that don't support custom HTML attributes."
 
-**Auto-ref description:** "Automatically generates `data-ref` values for major page sections based on the page slug and section position. Detects Elementor, Bricks, Oxygen, Breakdance, and standard `<section>` elements. Sections that already have a `data-ref` (manual or from the class converter) keep their value. Auto-generated refs follow the format `{slug}-01`, `{slug}-02`, etc."
+**Auto-ref description:** "Automatically generates `data-ref` values based on the page slug and position. Elements that already have a `data-ref` (manual or from the class converter) keep their value. Auto-generated refs include element context: `{slug}-01-section`, `{slug}-02-heading`, etc."
+
+**Auto-ref depth** — a radio group that controls how deep auto-ref scans the page. Only relevant when auto-ref is enabled:
+
+| Value | Label | Description |
+|-------|-------|-------------|
+| `section` | Sections | Top-level page sections only |
+| `block` | Blocks | Sections + inner containers, widgets, content blocks |
+| `element` | Elements | Sections + all semantic HTML (headings, text, images, buttons, forms) |
+
+**Note:** Depth can also be changed from the front-end toolbar via the **Depth** dropdown or the **D** keyboard shortcut, without returning to wp-admin.
 
 ### 5. How It Works (reference panel)
 
@@ -201,6 +211,7 @@ All settings use the WordPress Options API with a single option group `sdt_setti
 | `sdt_min_role` | string | `'administrator'` | Must match allowed role values |
 | `sdt_class_converter` | string | `'0'` | `'1'` or `'0'` |
 | `sdt_auto_ref` | string | `'0'` | `'1'` or `'0'` |
+| `sdt_auto_ref_depth` | string | `'section'` | Must be `'section'`, `'block'`, or `'element'` |
 
 Settings are registered individually via `register_setting()` with sanitize callbacks. The settings group is `sdt_settings` so they all save together on one form submit.
 
@@ -213,8 +224,9 @@ When the front end loads:
 1. Check `sdt_enabled` — if `'0'`, stop. No JS loaded.
 2. Check current user's role against `sdt_min_role` — if below threshold, stop.
 3. Enqueue `seguru-debug-toolbar.min.js` in the footer.
-4. Pass `sdt_default_mode`, `sdt_position`, `sdt_class_converter`, and `sdt_auto_ref` to the JS via `wp_localize_script()` as `window.sdtConfig`.
-5. The toolbar JS reads `window.sdtConfig` on init (if present) and applies the default mode, position, and feature flags. Falls back to its built-in defaults (Icons, bottom-right, both features off) when the config object is missing (non-WordPress contexts).
+4. Pass `sdt_default_mode`, `sdt_position`, `sdt_class_converter`, `sdt_auto_ref`, and `sdt_auto_ref_depth` to the JS via `wp_localize_script()` as `window.sdtConfig`.
+5. The toolbar JS reads `window.sdtConfig` on init (if present) and applies the default mode, position, feature flags, and depth. Falls back to its built-in defaults (Icons, bottom-right, both features off, section depth) when the config object is missing (non-WordPress contexts).
+6. The toolbar renders inside a Shadow DOM for complete CSS isolation from page builders and theme styles.
 
 ---
 

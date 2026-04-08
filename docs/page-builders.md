@@ -46,15 +46,15 @@ Auto-ref automatically generates `data-ref` values for major section elements on
 2. The toolbar detects section-level elements on the page and assigns refs based on the page slug and position
 3. A page at `/about-us` with three sections gets `about-us-01`, `about-us-02`, `about-us-03`
 
-**What it detects:**
+**What it detects (varies by depth level):**
 
-| Builder | Elements targeted |
-|---------|------------------|
-| Elementor | `.elementor-section`, top-level `.e-con` containers |
-| Bricks | `section.brxe-section`, top-level `.brxe-container` |
-| Oxygen | `.ct-section` |
-| Breakdance | `.breakdance-section` |
-| Generic HTML5 | `<section>` tags that are direct children of `body`, `main`, `[role="main"]`, `#content`, `.site-content`, or `.page-content` |
+| Depth | What gets labelled |
+|-------|-------------------|
+| **Sections** | Top-level containers: `.e-con` (Elementor), `section.brxe-section` (Bricks), `.ct-section` (Oxygen), `.breakdance-section`, HTML5 `<section>` |
+| **Blocks** | Everything in Sections + nested containers, all widgets (`[class*="elementor-widget-"]`, `[class*="brxe-"]`), Gutenberg blocks, `article`, `aside`, `nav` |
+| **Elements** | Everything in Sections + semantic HTML (`h1`–`h6`, `p`, `img`, `button`, `form`, `table`, `ul`, `ol`, etc.) + builder widgets |
+
+Only modern Elementor is supported (`.e-con` flexbox containers). Legacy `.elementor-section` and `.elementor-column` selectors are not included.
 
 **Priority order:**
 
@@ -153,3 +153,5 @@ Covered in detail in [wordpress.md](wordpress.md). Quick summary: use a Group bl
 **Test with the toolbar.** After adding your `data-ref` attributes (or turning on auto-ref), visit the front end while logged in and press **L** to cycle through modes. If a section doesn't show a label, view source and check that the `data-ref` attribute is in the rendered HTML.
 
 **SPA and AJAX content.** If your builder loads sections dynamically (lazy loading, infinite scroll, AJAX pagination), call `window.seguruDebugToolbar.refresh()` after the new content loads. The refresh method re-runs the class converter, auto-ref, and label injection so new sections get picked up.
+
+**Switch depth from the toolbar.** You don't need to go back to wp-admin to change depth. Click the **Depth** dropdown on the toolbar, or press **D** to cycle through Off → Sections → Blocks → Elements. This is especially useful when debugging — start at Sections for the big picture, then switch to Elements to pinpoint a specific component.

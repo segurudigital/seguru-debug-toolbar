@@ -6,6 +6,33 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ---
 
+## [1.3.0] — 2026-04-08
+
+### Added
+
+- **Dropdown toolbar UI** — Labels and Depth controls are now compact dropdown menus instead of a wide row of buttons. Toolbar layout: `[S] | Labels [Icons ▾] | Depth [Off ▾]`.
+- **Depth control in toolbar** — switch auto-ref depth from the front-end without going back to wp-admin. Four levels: Off, Sections, Blocks, Elements.
+- **Position-aware dropdowns** — menus flip above/below and left/right based on available viewport space.
+- **Smart element context in auto-ref names** — widget types extracted from builder classes: `home-03-heading` (Elementor), `home-04-text-basic` (Bricks), `home-05-headline` (Oxygen), `home-06-cover` (Gutenberg), `home-07-h2` (plain HTML).
+- **D keyboard shortcut** — cycles through depth levels (Off → Sections → Blocks → Elements).
+- **Escape key** — closes open dropdowns.
+- `setDepth()` and `getDepth()` added to public API.
+- Builder widget selectors at Block and Element depth: `[class*="elementor-widget-"]`, `[class*="brxe-"]`, Oxygen `ct-*`, `[class*="breakdance-"]`, `[class*="wp-block-"]`.
+
+### Changed
+
+- **Shadow DOM isolation** — toolbar and toast render inside a shadow root, preventing Elementor Pro and other page builder CSS from leaking in.
+- Labels in the page DOM use `all: initial` resets to override inherited builder styles.
+- Dark mode uses `:host-context(html.dark)` to read the class from outside the shadow boundary.
+- Block depth now allows nesting (no domination check) — only Section depth excludes nested elements.
+- Only modern Elementor supported (`.e-con` flexbox containers). Legacy `.elementor-section` and `.elementor-column` selectors removed.
+- Element depth inherits from Section (not Block) to skip generic wrapper divs and show semantic content.
+- Minimum PHP requirement updated to 8.1.
+- ~18 KB minified (up from ~12 KB).
+- All documentation updated to reflect new toolbar UI, depth controls, and Shadow DOM architecture.
+
+---
+
 ## [1.2.0] — 2026-04-08
 
 ### Added

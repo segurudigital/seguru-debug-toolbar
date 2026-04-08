@@ -12,18 +12,18 @@ The toolbar has two jobs: show `data-ref` labels and connect back to Seguru as t
 ### Content zones (left to right)
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  [S]  data-ref  │  Icons  │  Off  │  Full [L]  │  ⟶  │
-│  ───            │  ─────────── controls ──────  │ link │
-│  badge zone     │         functional zone       │      │
-└─────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────┐
+│  [S]  │  Labels  [Icons ▾]  │  Depth  [Off ▾]  │             │
+│  ───  │  ─── dropdown ────  │  ─── dropdown ──  │             │
+│ badge │     label mode      │   auto-ref depth  │             │
+└───────────────────────────────────────────────────────────────┘
 ```
 
-**Badge zone** — The Seguru S mark (16px circle, always Seguru Primary Blue `#00C0F3`, white mark) sits at the far left. The "data-ref" label sits next to it. On hover over the S mark, a subtle tooltip reads "Powered by Seguru Digital". Clicking the S mark opens seguru.digital in a new tab. This follows the brand handbook's compact badge spec for plugin footer bars and tight UI spaces.
+**Badge zone** — The Seguru S mark (16px circle, always Seguru Primary Blue `#00C0F3`, white mark) sits at the far left. On hover, a tooltip reads "Powered by Seguru Digital". Clicking opens seguru.digital in a new tab.
 
-**Functional zone** — The three mode buttons (Icons, Off, Full) with dot indicators and the `[L]` keyboard shortcut hint. This is the working area and takes up most of the space. No branding competes here.
+**Labels dropdown** — Controls how labels appear (Icons, Off, Full). Click to open, select an option to apply. Press L to cycle. Replaces the previous row of mode buttons.
 
-**Link indicator** — On hover over the S mark, a small external-link arrow appears to signal it's clickable. Subtle enough to not register as a UI element at rest.
+**Depth dropdown** — Controls auto-ref depth (Off, Sections, Blocks, Elements). Click to open, select a level. Press D to cycle. Dropdowns are position-aware — they flip above/below and left/right based on available viewport space.
 
 ### Why the S mark goes on the left
 
@@ -71,9 +71,9 @@ The brand handbook says the badge "always appears at the bottom of product UIs" 
 | Color (light) | `#9CA3AF` | Existing |
 | Right border | 1px solid `#E5E7EB` | Existing — divides badge zone from controls |
 
-### Mode buttons
+### Dropdown triggers
 
-No changes from current design. The functional zone stays identical.
+Each dropdown shows the current selection as a compact button with a caret (▾). Clicking opens a popover above or below the toolbar (depending on position). Options show a dot indicator, label, and description. The active option is highlighted in orange. A hint at the bottom shows the keyboard shortcut.
 
 ### Tooltip (S mark hover)
 
@@ -93,11 +93,11 @@ No changes from current design. The functional zone stays identical.
 
 ## Visual hierarchy (priority order)
 
-1. **Mode buttons** — the thing you click most, biggest touch targets
+1. **Dropdown triggers** — the thing you click most, showing current selection
 2. **data-ref labels on the page** — the main output of the tool
-3. **"data-ref" toolbar label** — orients you to what the toolbar does
+3. **"Labels" / "Depth" toolbar labels** — orient you to what each dropdown does
 4. **S mark** — brand anchor, passive, noticed but not demanding
-5. **Hover tooltip** — only appears on interaction
+5. **Dropdown menus + hover tooltip** — only appear on interaction
 
 The S mark should feel like it belongs there — part of the furniture, not a sticker slapped on top. At 16px on a ~36px tall bar, it's proportional. The blue circle provides just enough color contrast against the neutral toolbar to be identifiable as the Seguru mark without pulling focus from the orange accent used on the actual data-ref labels.
 
@@ -118,7 +118,7 @@ This separation means the badge reads as a brand element instantly, without need
 ## States
 
 ### Toolbar at rest
-S mark visible, "data-ref" label, three mode buttons. Current mode highlighted in orange. No tooltip.
+S mark visible, two dropdown triggers showing current Labels mode and Depth level. Active selection shown in orange text. No dropdowns open, no tooltip.
 
 ### Hover on S mark
 Tooltip fades in above the icon: "Powered by Seguru Digital". Cursor changes to pointer. A subtle external-link indicator (small arrow or underline on the tooltip text) signals it's a link.
