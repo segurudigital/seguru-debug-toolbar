@@ -474,15 +474,25 @@
     '.wp-block-cover', '.wp-block-media-text'
   ]);
 
-  // Element depth targets semantic content directly, skipping builder
-  // wrapper divs so you see h1/p/img instead of a wall of divs.
+  // Element depth targets semantic content AND builder widgets directly,
+  // skipping generic wrapper divs so you see meaningful context.
   var SELECTORS_ELEMENT = SELECTORS_SECTION.concat([
+    // Semantic HTML
     'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
     'p', 'blockquote', 'figure', 'figcaption', 'img', 'video', 'audio',
     'a[href]', 'button', 'input', 'select', 'textarea',
     'form', 'table', 'ul', 'ol', 'dl',
     'article', 'aside', 'nav', 'header', 'footer',
-    'details', 'summary', 'label', 'legend'
+    'details', 'summary', 'label', 'legend',
+    // Elementor widgets (specific, not generic .elementor-widget wrapper)
+    '[class*="elementor-widget-"]',
+    // Bricks elements
+    '[class*="brxe-"]',
+    // Oxygen elements
+    '.ct-text-block', '.ct-headline', '.ct-image', '.ct-button',
+    '.ct-link-text', '.ct-video', '.ct-icon', '.ct-fancy-image',
+    // Breakdance elements
+    '[class*="breakdance-"]'
   ]);
 
   var AUTO_REF_DEPTH_MAP = {
@@ -492,6 +502,35 @@
   };
 
   var AUTO_REF_SELECTORS = (AUTO_REF_DEPTH_MAP[autoRefDepth] || SELECTORS_SECTION).join(', ');
+
+  // Extract a human-readable context string from an element.
+  // Prefers builder widget types over raw tag names.
+  function getElementContext(el) {
+    var cls = el.className || '';
+
+    // Elementor: "elementor-widget-heading" → "heading"
+    var eMatch = cls.match(/elementor-widget-([\w-]+)/);
+    if (eMatch) return eMatch[1];
+
+    // Bricks: "brxe-heading" → "heading"
+    var bMatch = cls.match(/brxe-([\w-]+)/);
+    if (bMatch) return bMatch[1];
+
+    // Oxygen: "ct-headline" → "headline"
+    var oMatch = cls.match(/ct-([\w-]+)/);
+    if (oMatch) return oMatch[1];
+
+    // Breakdance: "breakdance-form" → "form"
+    var dMatch = cls.match(/breakdance-([\w-]+)/);
+    if (dMatch && dMatch[1] !== 'section' && dMatch[1] !== 'column') return dMatch[1];
+
+    // Gutenberg: "wp-block-cover" → "cover"
+    var gMatch = cls.match(/wp-block-([\w-]+)/);
+    if (gMatch) return gMatch[1];
+
+    // Fallback: tag name
+    return el.tagName.toLowerCase();
+  }
 
   function getPageSlug() {
     var path = window.location.pathname
@@ -538,8 +577,7 @@
       if (!el.getAttribute('data-ref')) {
         var num = String(i + 1);
         if (num.length < 2) num = '0' + num;
-        var tag = el.tagName.toLowerCase();
-        el.setAttribute('data-ref', slug + '-' + num + '-' + tag);
+        el.setAttribute('data-ref', slug + '-' + num + '-' + getElementContext(el));
       }
     }
   }
