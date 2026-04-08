@@ -30,7 +30,7 @@ Contributors: segurudigital
 Tags: debug, data-ref, overlay, qa, wireframe, developer tools
 Requires at least: 5.8
 Tested up to: 6.7
-Requires PHP: 8.3
+Requires PHP: 8.1
 Stable tag: __VERSION__
 License: MIT
 License URI: https://opensource.org/licenses/MIT

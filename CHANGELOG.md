@@ -6,6 +6,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ---
 
+## [1.1.1] — 2026-04-08
+
+### Fixed
+
+- Auto-ref dedup used className strings, causing sections with identical classes to be skipped. Now uses WeakSet for proper element identity checks.
+- Toolbar buttons now reflect the configured default mode on first render instead of always highlighting Icons.
+- Toast notification positioned correctly when toolbar is placed in top-right or top-left corners.
+- WordPress settings page missing from admin menu (stale plugin zip contained truncated PHP).
+- `wordpress.md` install instructions referenced "Settings → General" instead of "Settings → Debug Toolbar".
+
+### Changed
+
+- Minimum PHP requirement updated from 7.4 to 8.1.
+- WordPress plugin zip filename now includes version number (`seguru-debug-toolbar-wp-v1.1.1.zip`).
+- Build script reads version from `package.json` and injects it into `readme.txt` dynamically.
+
+---
+
 ## [1.1.0] — 2026-04-08
 
 ### Added
