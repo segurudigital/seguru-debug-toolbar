@@ -33,7 +33,6 @@ function sdt_defaults() {
         'sdt_min_role'        => 'administrator',
         'sdt_class_converter'  => '0',
         'sdt_auto_ref'         => '0',
-        'sdt_auto_ref_depth'   => 'section',
     ];
 }
 
@@ -46,7 +45,7 @@ function sdt_get( $key ) {
 function sdt_allowed_modes()      { return [ '0', '1', '2' ]; }
 function sdt_allowed_positions()  { return [ 'bottom-right', 'bottom-left', 'top-right', 'top-left' ]; }
 function sdt_allowed_roles()      { return [ 'administrator', 'editor', 'author' ]; }
-function sdt_allowed_depths()     { return [ 'section', 'block', 'element' ]; }
+
 
 // Map role slug → WP capability for the access check
 function sdt_role_capability( $role ) {
@@ -97,11 +96,6 @@ add_action( 'admin_init', function () {
         'default'           => '0',
     ] );
 
-    register_setting( SDT_OPTION_GROUP, 'sdt_auto_ref_depth', [
-        'type'              => 'string',
-        'sanitize_callback' => function ( $v ) { return in_array( $v, sdt_allowed_depths(), true ) ? $v : 'section'; },
-        'default'           => 'section',
-    ] );
 } );
 
 // ── Settings page menu item ───────────────────────────────────
@@ -163,7 +157,6 @@ add_action( 'wp_enqueue_scripts', function () {
         'position'       => sdt_get( 'sdt_position' ),
         'classConverter' => sdt_get( 'sdt_class_converter' ),
         'autoRef'        => sdt_get( 'sdt_auto_ref' ),
-        'autoRefDepth'   => sdt_get( 'sdt_auto_ref_depth' ),
     ] );
 } );
 
@@ -177,7 +170,6 @@ function sdt_render_settings_page() {
     $min_role        = sdt_get( 'sdt_min_role' );
     $class_converter = sdt_get( 'sdt_class_converter' );
     $auto_ref        = sdt_get( 'sdt_auto_ref' );
-    $auto_ref_depth  = sdt_get( 'sdt_auto_ref_depth' );
 
     ?>
     <div class="wrap">
@@ -328,29 +320,7 @@ function sdt_render_settings_page() {
                             Automatically generates <code>data-ref</code> values based on the page slug and position.
                             Detects Elementor, Bricks, Oxygen, Breakdance, and standard HTML elements.
                             Elements that already have a <code>data-ref</code> (manual or from the class converter) keep their value.
-                            Auto-generated refs follow the format <code>{slug}-01</code>, <code>{slug}-02</code>, etc.
-                        </p>
-                    </div>
-
-                    <div class="sdt-field" style="margin-top: 16px;">
-                        <span class="sdt-field__label">Auto-ref depth</span>
-                        <div class="sdt-radios">
-                            <?php
-                            $depths = [
-                                'section' => [ 'Section', 'Top-level page sections only (hero, features, CTA, footer)' ],
-                                'block'   => [ 'Block', 'Sections + inner containers, columns, widgets, and content blocks' ],
-                                'element' => [ 'Element', 'Everything — headings, paragraphs, buttons, images, lists, and more' ],
-                            ];
-                            foreach ( $depths as $val => $info ) :
-                            ?>
-                                <label>
-                                    <input type="radio" name="sdt_auto_ref_depth" value="<?php echo esc_attr( $val ); ?>" <?php checked( $auto_ref_depth, $val ); ?>>
-                                    <?php echo esc_html( $info[0] ); ?> <span class="desc">— <?php echo esc_html( $info[1] ); ?></span>
-                                </label>
-                            <?php endforeach; ?>
-                        </div>
-                        <p class="sdt-desc">
-                            Controls how deep auto-ref scans the page. Use <strong>Section</strong> for normal QA, <strong>Element</strong> when debugging a specific component.
+                            Use the <strong>Depth</strong> dropdown on the front-end toolbar (or press <kbd>D</kbd>) to switch between Sections, Blocks, and Elements.
                         </p>
                     </div>
                 </div>
