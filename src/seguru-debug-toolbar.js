@@ -443,11 +443,11 @@
         initModeLabel + ' <span class="sdt-toolbar__caret">&#9662;</span>' +
       '</button>' +
       '<div class="sdt-toolbar__dropdown" data-sdt-menu="mode">' +
-        '<button class="sdt-toolbar__option' + (state === 0 ? ' sdt-toolbar__option--active' : '') + '" data-sdt-state="0">' +
-          '<span class="sdt-toolbar__option-dot"></span> Icons' +
-        '</button>' +
         '<button class="sdt-toolbar__option' + (state === 1 ? ' sdt-toolbar__option--active' : '') + '" data-sdt-state="1">' +
           '<span class="sdt-toolbar__option-dot"></span> Off' +
+        '</button>' +
+        '<button class="sdt-toolbar__option' + (state === 0 ? ' sdt-toolbar__option--active' : '') + '" data-sdt-state="0">' +
+          '<span class="sdt-toolbar__option-dot"></span> Icons' +
         '</button>' +
         '<button class="sdt-toolbar__option' + (state === 2 ? ' sdt-toolbar__option--active' : '') + '" data-sdt-state="2">' +
           '<span class="sdt-toolbar__option-dot"></span> Full' +
@@ -932,7 +932,9 @@
       if (e.key === 'Escape') { closeAllDropdowns(); return; }
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.isContentEditable) return;
       if (e.key === 'l' || e.key === 'L') {
-        setState((state + 1) % 3);
+        var MODE_CYCLE = [1, 0, 2]; // Off → Icons → Full
+        var nextMode = MODE_CYCLE[(MODE_CYCLE.indexOf(state) + 1) % MODE_CYCLE.length];
+        setState(nextMode);
       }
       if (e.key === 'd' || e.key === 'D') {
         var currentIdx = autoRefEnabled ? DEPTH_CYCLE.indexOf(autoRefDepth) : 0;
