@@ -536,20 +536,25 @@
   ];
 
   var SELECTORS_BLOCK = SELECTORS_SECTION.concat([
-    // Elementor inner containers + widgets
-    '.elementor-column', '.elementor-widget',
+    // Elementor — nested containers + all widgets
+    '.elementor-column', '.elementor-widget-wrap',
     '.e-con .e-con',
+    '[class*="elementor-widget-"]',
     // Bricks inner blocks
     '.brxe-block', '.brxe-div',
+    '[class*="brxe-"]:not(section)',
     // Oxygen inner
     '.ct-div', '.ct-column',
+    '.ct-text-block', '.ct-headline', '.ct-image', '.ct-button',
     // Breakdance inner
     '.breakdance-column',
+    '[class*="breakdance-"]:not([class*="breakdance-section"])',
     // HTML5 structural
     'article', 'aside', 'nav',
     // Gutenberg blocks
     '.wp-block-group', '.wp-block-column', '.wp-block-columns',
-    '.wp-block-cover', '.wp-block-media-text'
+    '.wp-block-cover', '.wp-block-media-text',
+    '[class*="wp-block-"]'
   ]);
 
   // Element depth targets semantic content AND builder widgets directly,
