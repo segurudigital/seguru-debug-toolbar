@@ -155,6 +155,16 @@
     '  color: rgba(' + ACCENT + ', 0.8);',
     '}',
 
+    // --- Element type tag prefix ---
+    '.sdt-ref-tag {',
+    '  all: initial;',
+    '  font-family: ' + FONT_MONO + ';',
+    '  font-size: inherit;',
+    '  font-weight: 600;',
+    '  color: inherit;',
+    '  opacity: 0.5;',
+    '}',
+
     // --- Mode: hide-labels ---
     'body.sdt-hide .sdt-ref-icon,',
     'body.sdt-hide .sdt-ref-tooltip,',
@@ -712,6 +722,7 @@
       el[MARKER] = true;
 
       var refValue = el.getAttribute('data-ref');
+      var elContext = getElementContext(el);
 
       // Ensure the element can hold absolutely-positioned children
       var pos = window.getComputedStyle(el).position;
@@ -721,7 +732,7 @@
       var icon = document.createElement('span');
       icon.className = 'sdt-ref-icon';
       icon.textContent = '\u24D8'; // ⓘ
-      icon.title = 'Click to copy: ' + refValue;
+      icon.title = elContext + ' · ' + refValue + ' (click to copy)';
       icon.addEventListener('click', function (e) {
         e.stopPropagation();
         e.preventDefault();
@@ -731,7 +742,7 @@
       // Tooltip (shown on hover)
       var tooltip = document.createElement('span');
       tooltip.className = 'sdt-ref-tooltip';
-      tooltip.textContent = refValue;
+      tooltip.innerHTML = '<span class="sdt-ref-tag">' + elContext + '</span> \u00B7 ' + refValue;
       tooltip.addEventListener('click', function (e) {
         e.stopPropagation();
         e.preventDefault();
@@ -741,8 +752,8 @@
       // Full label (always visible in full mode)
       var fullLabel = document.createElement('span');
       fullLabel.className = 'sdt-ref-full-label';
-      fullLabel.textContent = refValue;
-      fullLabel.title = 'Click to copy';
+      fullLabel.innerHTML = '<span class="sdt-ref-tag">' + elContext + '</span> \u00B7 ' + refValue;
+      fullLabel.title = 'Click to copy: ' + refValue;
       fullLabel.addEventListener('click', function (e) {
         e.stopPropagation();
         e.preventDefault();
