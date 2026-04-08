@@ -630,10 +630,10 @@
       if (seen.has(el)) return;
       seen.add(el);
 
-      // At section/block depth, skip elements nested inside another
-      // matched section (avoids double-labelling inner containers).
-      // At element depth, allow nesting — the whole point is density.
-      if (autoRefDepth === 'element') {
+      // At section depth, skip elements nested inside another matched
+      // section (avoids double-labelling). At block/element depth,
+      // allow nesting so inner widgets and content are labelled.
+      if (autoRefDepth !== 'section') {
         allSections.push(el);
       } else {
         var dominated = false;
