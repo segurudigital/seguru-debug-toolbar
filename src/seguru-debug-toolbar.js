@@ -47,149 +47,33 @@
   var classConverterEnabled = wpConfig.classConverter === '1' || wpConfig.classConverter === true;
   var autoRefEnabled = wpConfig.autoRef === '1' || wpConfig.autoRef === true;
 
-  // ─── Inject all CSS (self-contained, no external stylesheet needed) ──
-  var css = document.createElement('style');
-  css.id = 'seguru-debug-toolbar-styles';
-  css.textContent = [
+  // ─── Position config ────────────────────────────────────────
+  var position = wpConfig.position || 'bottom-right';
+  var posMap = {
+    'bottom-right': 'bottom:20px;right:20px;',
+    'bottom-left':  'bottom:20px;left:20px;right:auto;',
+    'top-right':    'top:20px;bottom:auto;right:20px;',
+    'top-left':     'top:20px;bottom:auto;left:20px;right:auto;'
+  };
+  var toastPosMap = {
+    'bottom-right': 'bottom:64px;right:20px;',
+    'bottom-left':  'bottom:64px;left:20px;right:auto;',
+    'top-right':    'top:64px;bottom:auto;right:20px;',
+    'top-left':     'top:64px;bottom:auto;left:20px;right:auto;'
+  };
 
-    // --- Toolbar chrome ---
-    '.sdt-toolbar {',
-    '  position: fixed;',
-    '  bottom: 20px;',
-    '  right: 20px;',
-    '  z-index: 99999;',
-    '  display: flex;',
-    '  align-items: center;',
-    '  gap: 0;',
-    '  background: #fff;',
-    '  border: 1px solid #E5E7EB;',
-    '  border-radius: 6px;',
-    '  box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06);',
-    '  font-family: ' + FONT_UI + ';',
-    '  font-size: 0.75rem;',
-    '  overflow: hidden;',
-    '  user-select: none;',
-    '}',
-
-    '.sdt-toolbar__label {',
-    '  padding: 8px 12px;',
-    '  font-weight: 600;',
-    '  color: #9CA3AF;',
-    '  border-right: 1px solid #E5E7EB;',
-    '  white-space: nowrap;',
-    '  letter-spacing: 0.3px;',
-    '  text-transform: uppercase;',
-    '  font-size: 0.625rem;',
-    '}',
-
-    '.sdt-toolbar__states {',
-    '  display: flex;',
-    '  align-items: stretch;',
-    '  gap: 0;',
-    '}',
-
-    '.sdt-toolbar__btn {',
-    '  display: flex;',
-    '  align-items: center;',
-    '  gap: 4px;',
-    '  padding: 8px 12px;',
-    '  background: transparent;',
-    '  border: none;',
-    '  cursor: pointer;',
-    '  font-family: ' + FONT_UI + ';',
-    '  font-size: 0.75rem;',
-    '  font-weight: 500;',
-    '  color: #9CA3AF;',
-    '  white-space: nowrap;',
-    '  transition: background 0.1s, color 0.1s;',
-    '  border-right: 1px solid #E5E7EB;',
-    '}',
-
-    '.sdt-toolbar__btn:last-child { border-right: none; }',
-
-    '.sdt-toolbar__btn:hover {',
-    '  background: #F9FAFB;',
-    '  color: #374151;',
-    '}',
-
-    '.sdt-toolbar__btn--active {',
-    '  background: ' + ACCENT_WASH + ';',
-    '  color: ' + ACCENT_HEX + ';',
-    '  font-weight: 600;',
-    '}',
-
-    '.sdt-toolbar__dot {',
-    '  width: 6px;',
-    '  height: 6px;',
-    '  border-radius: 50%;',
-    '  background: currentColor;',
-    '  flex-shrink: 0;',
-    '}',
-
-    '.sdt-toolbar__shortcut {',
-    '  font-size: 0.625rem;',
-    '  color: #D1D5DB;',
-    '  margin-left: 2px;',
-    '}',
-
-    // --- Badge zone (Seguru S mark + powered-by tooltip) ---
-    '.sdt-toolbar__badge {',
-    '  display: flex;',
-    '  align-items: center;',
-    '  padding: 0 10px;',
-    '  cursor: pointer;',
-    '  position: relative;',
-    '  border-right: 1px solid #E5E7EB;',
-    '  text-decoration: none;',
-    '  transition: background 0.1s;',
-    '  align-self: stretch;',
-    '}',
-
-    '.sdt-toolbar__badge:hover {',
-    '  background: #F9FAFB;',
-    '}',
-
-    '.sdt-toolbar__badge-tip {',
-    '  position: absolute;',
-    '  bottom: calc(100% + 8px);',
-    '  left: 50%;',
-    '  transform: translateX(-50%) translateY(4px);',
-    '  font-family: "Open Sans", ' + FONT_UI + ';',
-    '  font-size: 11px;',
-    '  font-weight: 400;',
-    '  color: #FFF7ED;',
-    '  background: rgba(17, 24, 39, 0.88);',
-    '  padding: 5px 10px;',
-    '  border-radius: 4px;',
-    '  white-space: nowrap;',
-    '  pointer-events: none;',
-    '  opacity: 0;',
-    '  transition: opacity 0.15s, transform 0.15s;',
-    '  z-index: 100001;',
-    '}',
-
-    '.sdt-toolbar__badge:hover .sdt-toolbar__badge-tip {',
-    '  opacity: 1;',
-    '  transform: translateX(-50%) translateY(0);',
-    '}',
-
-    // --- Dark mode ---
-    'html.dark .sdt-toolbar {',
-    '  background: #27272A;',
-    '  border-color: #3F3F46;',
-    '}',
-    'html.dark .sdt-toolbar__label { border-right-color: #3F3F46; }',
-    'html.dark .sdt-toolbar__btn { border-right-color: #3F3F46; }',
-    'html.dark .sdt-toolbar__btn:hover { background: #3F3F46; }',
-    'html.dark .sdt-toolbar__btn--active {',
-    '  background: rgba(' + ACCENT + ', 0.12);',
-    '}',
-    'html.dark .sdt-toolbar__badge { border-right-color: #3F3F46; }',
-    'html.dark .sdt-toolbar__badge:hover { background: #3F3F46; }',
-    'html.dark .sdt-toolbar__badge-tip { color: #B1B3B6; }',
+  // ─── Label CSS (injected into main document) ───────────────
+  // Labels live inside data-ref elements, so they share the page DOM.
+  // `all:initial` resets inherited page/builder styles (Elementor, Bricks, etc.)
+  // before re-declaring our own properties.
+  var labelCss = document.createElement('style');
+  labelCss.id = 'seguru-debug-toolbar-styles';
+  labelCss.textContent = [
 
     // --- Icon mode: small dot, hover reveals tooltip ---
     '.sdt-ref-icon {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
     '  position: absolute;',
     '  top: 2px;',
     '  left: 2px;',
@@ -215,6 +99,8 @@
 
     // --- Tooltip (shown on hover via CSS) ---
     '.sdt-ref-tooltip {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
     '  position: absolute;',
     '  top: 2px;',
     '  left: 22px;',
@@ -244,6 +130,8 @@
 
     // --- Full-label mode ---
     '.sdt-ref-full-label {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
     '  position: absolute;',
     '  top: 2px;',
     '  left: 2px;',
@@ -266,13 +154,199 @@
     '  color: rgba(' + ACCENT + ', 0.8);',
     '}',
 
-    // --- Copied toast (fixed position, animated — from Atlas) ---
-    '.sdt-toast {',
+    // --- Mode: hide-labels ---
+    'body.sdt-hide .sdt-ref-icon,',
+    'body.sdt-hide .sdt-ref-tooltip,',
+    'body.sdt-hide .sdt-ref-full-label { display: none !important; }',
+
+    // --- Mode: show-labels (full) — icon + tooltip hidden ---
+    'body.sdt-full .sdt-ref-icon,',
+    'body.sdt-full .sdt-ref-tooltip { display: none !important; }',
+
+    // --- Default (icons): full label hidden ---
+    'body:not(.sdt-full) .sdt-ref-full-label { display: none !important; }',
+
+  ].join('\n');
+
+  document.head.appendChild(labelCss);
+
+
+  // ─── Shadow DOM for toolbar + toast (isolated from page CSS) ─
+  // Toolbar and toast are rendered inside a shadow root so page
+  // styles (Elementor, Bricks, theme CSS) cannot leak in.
+  var shadowHost = document.createElement('div');
+  shadowHost.id = 'seguru-debug-toolbar-host';
+  shadowHost.style.cssText = 'all:initial;position:fixed;top:0;left:0;width:0;height:0;overflow:visible;z-index:99999;pointer-events:none;';
+
+  var shadowCss = [
+    // --- Toolbar chrome ---
+    '.sdt-toolbar {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
     '  position: fixed;',
-    '  bottom: 64px;',
-    '  right: 20px;',
+    '  ' + (posMap[position] || posMap['bottom-right']),
+    '  z-index: 99999;',
+    '  display: flex;',
+    '  align-items: center;',
+    '  gap: 0;',
+    '  background: #fff;',
+    '  border: 1px solid #E5E7EB;',
+    '  border-radius: 6px;',
+    '  box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06);',
+    '  font-family: ' + FONT_UI + ';',
+    '  font-size: 0.75rem;',
+    '  line-height: 1.5;',
+    '  overflow: hidden;',
+    '  user-select: none;',
+    '  pointer-events: auto;',
+    '}',
+
+    '.sdt-toolbar__label {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: block;',
+    '  padding: 8px 12px;',
+    '  font-family: ' + FONT_UI + ';',
+    '  font-weight: 600;',
+    '  color: #9CA3AF;',
+    '  border-right: 1px solid #E5E7EB;',
+    '  white-space: nowrap;',
+    '  letter-spacing: 0.3px;',
+    '  text-transform: uppercase;',
+    '  font-size: 0.625rem;',
+    '  line-height: 1.5;',
+    '}',
+
+    '.sdt-toolbar__states {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: flex;',
+    '  align-items: stretch;',
+    '  gap: 0;',
+    '}',
+
+    '.sdt-toolbar__btn {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: flex;',
+    '  align-items: center;',
+    '  gap: 4px;',
+    '  padding: 8px 12px;',
+    '  background: transparent;',
+    '  border: none;',
+    '  cursor: pointer;',
+    '  font-family: ' + FONT_UI + ';',
+    '  font-size: 0.75rem;',
+    '  font-weight: 500;',
+    '  color: #9CA3AF;',
+    '  white-space: nowrap;',
+    '  line-height: 1.5;',
+    '  transition: background 0.1s, color 0.1s;',
+    '  border-right: 1px solid #E5E7EB;',
+    '}',
+
+    '.sdt-toolbar__btn:last-child { border-right: none; }',
+
+    '.sdt-toolbar__btn:hover {',
+    '  background: #F9FAFB;',
+    '  color: #374151;',
+    '}',
+
+    '.sdt-toolbar__btn--active {',
+    '  background: ' + ACCENT_WASH + ';',
+    '  color: ' + ACCENT_HEX + ';',
+    '  font-weight: 600;',
+    '}',
+
+    '.sdt-toolbar__dot {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: block;',
+    '  width: 6px;',
+    '  height: 6px;',
+    '  border-radius: 50%;',
+    '  background: currentColor;',
+    '  flex-shrink: 0;',
+    '}',
+
+    '.sdt-toolbar__shortcut {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  font-family: ' + FONT_UI + ';',
+    '  font-size: 0.625rem;',
+    '  color: #D1D5DB;',
+    '  margin-left: 2px;',
+    '}',
+
+    // --- Badge zone (Seguru S mark + powered-by tooltip) ---
+    '.sdt-toolbar__badge {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: flex;',
+    '  align-items: center;',
+    '  padding: 0 10px;',
+    '  cursor: pointer;',
+    '  position: relative;',
+    '  border-right: 1px solid #E5E7EB;',
+    '  text-decoration: none;',
+    '  transition: background 0.1s;',
+    '  align-self: stretch;',
+    '}',
+
+    '.sdt-toolbar__badge:hover {',
+    '  background: #F9FAFB;',
+    '}',
+
+    '.sdt-toolbar__badge-tip {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  position: absolute;',
+    '  bottom: calc(100% + 8px);',
+    '  left: 50%;',
+    '  transform: translateX(-50%) translateY(4px);',
+    '  font-family: "Open Sans", ' + FONT_UI + ';',
+    '  font-size: 11px;',
+    '  font-weight: 400;',
+    '  color: #FFF7ED;',
+    '  background: rgba(17, 24, 39, 0.88);',
+    '  padding: 5px 10px;',
+    '  border-radius: 4px;',
+    '  white-space: nowrap;',
+    '  pointer-events: none;',
+    '  opacity: 0;',
+    '  transition: opacity 0.15s, transform 0.15s;',
+    '  z-index: 100001;',
+    '}',
+
+    '.sdt-toolbar__badge:hover .sdt-toolbar__badge-tip {',
+    '  opacity: 1;',
+    '  transform: translateX(-50%) translateY(0);',
+    '}',
+
+    // --- Dark mode (uses :host-context to read html.dark from outside shadow) ---
+    ':host-context(html.dark) .sdt-toolbar {',
+    '  background: #27272A;',
+    '  border-color: #3F3F46;',
+    '}',
+    ':host-context(html.dark) .sdt-toolbar__label { border-right-color: #3F3F46; }',
+    ':host-context(html.dark) .sdt-toolbar__btn { border-right-color: #3F3F46; }',
+    ':host-context(html.dark) .sdt-toolbar__btn:hover { background: #3F3F46; }',
+    ':host-context(html.dark) .sdt-toolbar__btn--active {',
+    '  background: rgba(' + ACCENT + ', 0.12);',
+    '}',
+    ':host-context(html.dark) .sdt-toolbar__badge { border-right-color: #3F3F46; }',
+    ':host-context(html.dark) .sdt-toolbar__badge:hover { background: #3F3F46; }',
+    ':host-context(html.dark) .sdt-toolbar__badge-tip { color: #B1B3B6; }',
+
+    // --- Toast ---
+    '.sdt-toast {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  position: fixed;',
+    '  ' + (toastPosMap[position] || toastPosMap['bottom-right']),
     '  font-family: ' + FONT_MONO + ';',
     '  font-size: 12px;',
+    '  line-height: 1.5;',
     '  padding: 8px 14px;',
     '  background: rgba(22, 163, 74, 0.9);',
     '  color: #fff;',
@@ -290,48 +364,12 @@
     '  transform: translateY(0);',
     '}',
 
-    // --- Mode: hide-labels ---
-    'body.sdt-hide .sdt-ref-icon,',
-    'body.sdt-hide .sdt-ref-tooltip,',
-    'body.sdt-hide .sdt-ref-full-label { display: none; }',
-
-    // --- Mode: show-labels (full) — icon + tooltip hidden ---
-    'body.sdt-full .sdt-ref-icon,',
-    'body.sdt-full .sdt-ref-tooltip { display: none; }',
-
-    // --- Default (icons): full label hidden ---
-    'body:not(.sdt-full) .sdt-ref-full-label { display: none; }',
-
   ].join('\n');
 
-  document.head.appendChild(css);
-
-
-  // ─── Apply position from config ──────────────────────────────
-  var position = wpConfig.position || 'bottom-right';
-  var posStyle = document.createElement('style');
-  posStyle.id = 'sdt-position-override';
-  var posMap = {
-    'bottom-right': 'bottom:20px;right:20px;',
-    'bottom-left':  'bottom:20px;left:20px;right:auto;',
-    'top-right':    'top:20px;bottom:auto;right:20px;',
-    'top-left':     'top:20px;bottom:auto;left:20px;right:auto;'
-  };
-  var toastPosMap = {
-    'bottom-right': 'bottom:64px;right:20px;',
-    'bottom-left':  'bottom:64px;left:20px;right:auto;',
-    'top-right':    'top:64px;bottom:auto;right:20px;',
-    'top-left':     'top:64px;bottom:auto;left:20px;right:auto;'
-  };
-  if (position !== 'bottom-right' && posMap[position]) {
-    posStyle.textContent = '.sdt-toolbar{' + posMap[position] + '} .sdt-toast{' + toastPosMap[position] + '}';
-    document.head.appendChild(posStyle);
-  }
 
   // ─── Build toolbar DOM ──────────────────────────────────────
   var toolbar = document.createElement('div');
   toolbar.className = 'sdt-toolbar';
-  toolbar.id = 'seguru-debug-toolbar';
   toolbar.setAttribute('role', 'toolbar');
   toolbar.setAttribute('aria-label', 'Element reference labels');
   toolbar.innerHTML =
@@ -354,7 +392,7 @@
     '</div>';
 
 
-  // ─── Toast element (Atlas feature) ──────────────────────────
+  // ─── Toast element ──────────────────────────────────────────
   var toast = document.createElement('div');
   toast.className = 'sdt-toast';
   var toastTimer = null;
@@ -561,8 +599,14 @@
 
   // ─── Init ───────────────────────────────────────────────────
   function init() {
-    document.body.appendChild(toolbar);
-    document.body.appendChild(toast);
+    // Mount toolbar + toast inside shadow DOM for style isolation
+    document.body.appendChild(shadowHost);
+    var shadow = shadowHost.attachShadow({ mode: 'open' });
+    var style = document.createElement('style');
+    style.textContent = shadowCss;
+    shadow.appendChild(style);
+    shadow.appendChild(toolbar);
+    shadow.appendChild(toast);
 
     // Run converters before scanning for labels
     convertClassRefs();
