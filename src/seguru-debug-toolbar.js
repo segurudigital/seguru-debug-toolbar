@@ -474,10 +474,15 @@
     '.wp-block-cover', '.wp-block-media-text'
   ]);
 
-  var SELECTORS_ELEMENT = SELECTORS_BLOCK.concat([
+  // Element depth targets semantic content directly, skipping builder
+  // wrapper divs so you see h1/p/img instead of a wall of divs.
+  var SELECTORS_ELEMENT = SELECTORS_SECTION.concat([
     'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-    'p', 'blockquote', 'figure', 'img', 'video',
-    'a[href]', 'button', 'form', 'table', 'ul', 'ol'
+    'p', 'blockquote', 'figure', 'figcaption', 'img', 'video', 'audio',
+    'a[href]', 'button', 'input', 'select', 'textarea',
+    'form', 'table', 'ul', 'ol', 'dl',
+    'article', 'aside', 'nav', 'header', 'footer',
+    'details', 'summary', 'label', 'legend'
   ]);
 
   var AUTO_REF_DEPTH_MAP = {
