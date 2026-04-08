@@ -46,6 +46,7 @@
   // Feature flags (set via WP settings or manual sdtConfig)
   var classConverterEnabled = wpConfig.classConverter === '1' || wpConfig.classConverter === true;
   var autoRefEnabled = wpConfig.autoRef === '1' || wpConfig.autoRef === true;
+  var autoRefDepth = wpConfig.autoRefDepth || 'section'; // section | block | element
 
   // ─── Position config ────────────────────────────────────────
   var position = wpConfig.position || 'bottom-right';
@@ -437,7 +438,8 @@
   // Elements with an existing data-ref (manual or from class converter)
   // are counted in the sequence but not overwritten.
 
-  var AUTO_REF_SELECTORS = [
+  // Selector tiers for auto-ref depth levels
+  var SELECTORS_SECTION = [
     // Elementor (flexbox containers + legacy sections)
     '.elementor-section',
     '.e-con:not(.e-con .e-con)',        // top-level containers only
@@ -453,7 +455,38 @@
     '#content > section, .site-content > section, .page-content > section',
     // Fallback: direct children of common wrapper IDs
     '#content > div > section'
-  ].join(', ');
+  ];
+
+  var SELECTORS_BLOCK = SELECTORS_SECTION.concat([
+    // Elementor inner containers + widgets
+    '.elementor-column', '.elementor-widget',
+    '.e-con .e-con',
+    // Bricks inner blocks
+    '.brxe-block', '.brxe-div',
+    // Oxygen inner
+    '.ct-div', '.ct-column',
+    // Breakdance inner
+    '.breakdance-column',
+    // HTML5 structural
+    'article', 'aside', 'nav',
+    // Gutenberg blocks
+    '.wp-block-group', '.wp-block-column', '.wp-block-columns',
+    '.wp-block-cover', '.wp-block-media-text'
+  ]);
+
+  var SELECTORS_ELEMENT = SELECTORS_BLOCK.concat([
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'p', 'blockquote', 'figure', 'img', 'video',
+    'a[href]', 'button', 'form', 'table', 'ul', 'ol'
+  ]);
+
+  var AUTO_REF_DEPTH_MAP = {
+    'section': SELECTORS_SECTION,
+    'block':   SELECTORS_BLOCK,
+    'element': SELECTORS_ELEMENT
+  };
+
+  var AUTO_REF_SELECTORS = (AUTO_REF_DEPTH_MAP[autoRefDepth] || SELECTORS_SECTION).join(', ');
 
   function getPageSlug() {
     var path = window.location.pathname
@@ -474,13 +507,18 @@
       if (seen.has(el)) return;
       seen.add(el);
 
-      // Skip elements nested inside another matched section
-      // (avoids double-labelling inner containers)
-      var dominated = false;
-      for (var j = 0; j < allSections.length; j++) {
-        if (allSections[j].contains(el)) { dominated = true; break; }
+      // At section/block depth, skip elements nested inside another
+      // matched section (avoids double-labelling inner containers).
+      // At element depth, allow nesting — the whole point is density.
+      if (autoRefDepth === 'element') {
+        allSections.push(el);
+      } else {
+        var dominated = false;
+        for (var j = 0; j < allSections.length; j++) {
+          if (allSections[j].contains(el)) { dominated = true; break; }
+        }
+        if (!dominated) allSections.push(el);
       }
-      if (!dominated) allSections.push(el);
     });
 
     // Sort by document position

@@ -63,5 +63,6 @@ add_action( 'wp_enqueue_scripts', function () {
         'position'       => get_option( 'sdt_position', 'bottom-right' ),
         'classConverter' => get_option( 'sdt_class_converter', '0' ),
         'autoRef'        => get_option( 'sdt_auto_ref', '0' ),
+        'autoRefDepth'   => get_option( 'sdt_auto_ref_depth', 'section' ),
     ] );
 } );
