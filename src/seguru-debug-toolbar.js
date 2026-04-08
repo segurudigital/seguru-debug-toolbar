@@ -593,8 +593,24 @@
   var AUTO_REF_SELECTORS = (AUTO_REF_DEPTH_MAP[autoRefDepth] || SELECTORS_SECTION).join(', ');
 
   // Extract a human-readable context string from an element.
-  // Prefers builder widget types over raw tag names.
+  // Prefers the actual HTML tag for semantic elements, and for
+  // builder wrappers (divs) looks inside for the real content tag.
+  var SEMANTIC_TAGS = ['h1','h2','h3','h4','h5','h6','p','blockquote','img','video','audio','button','a','input','select','textarea','form','table','ul','ol','dl','nav','article','aside','header','footer','figure','figcaption','details','summary','label','legend','section'];
+
   function getElementContext(el) {
+    var tag = el.tagName.toLowerCase();
+
+    // If the element itself is semantic, use the tag directly
+    if (SEMANTIC_TAGS.indexOf(tag) !== -1) return tag;
+
+    // Generic wrapper (div/span) — look inside for the primary content element
+    var heading = el.querySelector('h1, h2, h3, h4, h5, h6');
+    if (heading) return heading.tagName.toLowerCase();
+
+    var content = el.querySelector('img, video, audio, button, a, p, form, table, blockquote, figure');
+    if (content) return content.tagName.toLowerCase();
+
+    // Fall back to builder widget class for context
     var cls = el.className || '';
 
     // Elementor: "elementor-widget-heading" → "heading"
@@ -618,7 +634,7 @@
     if (gMatch) return gMatch[1];
 
     // Fallback: tag name
-    return el.tagName.toLowerCase();
+    return tag;
   }
 
   function getPageSlug() {
