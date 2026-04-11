@@ -16,6 +16,7 @@
  *
  * Press H to toggle presentation mode: hides toolbar + all labels.
  * Press D to cycle auto-ref depth: Off → Sections → Blocks → Elements.
+ * Use Outline to show section/block boundaries for spacing QA.
  *
  * Click any label to copy the data-ref value to clipboard.
  *
@@ -24,6 +25,8 @@
  *   window.seguruDebugToolbar.getState()
  *   window.seguruDebugToolbar.setDepth('off'|'section'|'block'|'element')
  *   window.seguruDebugToolbar.getDepth()
+ *   window.seguruDebugToolbar.setOutline('off'|'section'|'block')
+ *   window.seguruDebugToolbar.getOutline()
  *   window.seguruDebugToolbar.refresh()  // re-scan for new data-ref elements
  */
 (function () {
@@ -31,9 +34,10 @@
 
   // ─── Configuration ──────────────────────────────────────────
   var ACCENT = '234, 88, 12';        // orange — functional UI accent
+  var ACCENT_ON_DARK = '249, 115, 22';
   var ACCENT_HEX = '#EA580C';
   var ACCENT_WASH = 'rgba(234, 88, 12, 0.08)';
-  var SEGURU_BLUE = '#002FA7';       // brand primary — badge only
+  var SEGURU_BLUE = '#00C0F3';       // brand primary — badge only
   var FONT_MONO = "'SF Mono', 'Fira Code', 'Cascadia Code', monospace";
   var FONT_UI = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
@@ -75,6 +79,10 @@
     }
   }
 
+  function rectsOverlap(a, b, gap) {
+    return !(a.right + gap <= b.left || a.left >= b.right + gap || a.bottom + gap <= b.top || a.top >= b.bottom + gap);
+  }
+
   function closestMatch(el, selector) {
     while (el && el !== shadowHost && el !== document && el.nodeType === 1) {
       if (matchesSelector(el, selector)) return el;
@@ -97,7 +105,7 @@
   var pageConfig = (typeof window.seguruDebugConfig !== 'undefined') ? window.seguruDebugConfig : {};
   // Merge: pageConfig values win over wpConfig values
   var config = {};
-  var _keys = ['defaultMode', 'classConverter', 'autoRef', 'autoRefDepth', 'position', 'pageSlug'];
+  var _keys = ['defaultMode', 'classConverter', 'autoRef', 'autoRefDepth', 'outlineMode', 'position', 'pageSlug'];
   for (var _i = 0; _i < _keys.length; _i++) {
     var _k = _keys[_i];
     config[_k] = (_k in pageConfig) ? pageConfig[_k] : wpConfig[_k];
@@ -109,6 +117,7 @@
   var classConverterEnabled = config.classConverter === '1' || config.classConverter === true;
   var autoRefEnabled = config.autoRef === '1' || config.autoRef === true;
   var autoRefDepth = config.autoRefDepth || 'section'; // section | block | element
+  var outlineMode = config.outlineMode || 'off'; // off | section | block
 
   // Presentation mode — H key hides toolbar + all labels
   var presentationMode = false;
@@ -228,6 +237,9 @@
     '  pointer-events: auto;',
     '  user-select: all;',
     '  white-space: nowrap;',
+    '  max-width: 220px;',
+    '  overflow: hidden;',
+    '  text-overflow: ellipsis;',
     '}',
 
     '.sdt-ref-full-label:hover {',
@@ -282,10 +294,61 @@
     '  color: #EA580C;',
     '}',
 
+    '.sdt-ref-link {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  position: absolute;',
+    '  top: 2px;',
+    '  left: 9px;',
+    '  width: 1px;',
+    '  height: 0;',
+    '  background: rgba(' + ACCENT + ', 0.55);',
+    '  z-index: 89;',
+    '  pointer-events: none;',
+    '  opacity: 0;',
+    '}',
+    '.sdt-ref-link.sdt-on-dark {',
+    '  background: rgba(255, 255, 255, 0.62);',
+    '}',
+
     // --- Tree panel: element highlight on row hover ---
     '.sdt-tree-highlight {',
     '  outline: 2px solid #EA580C !important;',
     '  outline-offset: 3px !important;',
+    '}',
+    '.sdt-tree-jump-highlight {',
+    '  outline: 3px solid rgba(' + ACCENT + ', 0.92) !important;',
+    '  outline-offset: 4px !important;',
+    '  box-shadow: 0 0 0 6px rgba(' + ACCENT + ', 0.16) !important;',
+    '}',
+
+    // --- Outline guides ---
+    '.sdt-outline-section {',
+    '  outline: 2px solid rgba(' + ACCENT + ', 0.90) !important;',
+    '  outline-offset: -2px !important;',
+    '  box-shadow: inset 0 0 0 1px rgba(' + ACCENT + ', 0.20), inset 0 18px 0 0 rgba(' + ACCENT + ', 0.08) !important;',
+    '}',
+    '.sdt-outline-block {',
+    '  outline: 1px dashed rgba(' + ACCENT + ', 0.46) !important;',
+    '  outline-offset: -1px !important;',
+    '  box-shadow: inset 0 0 0 1px rgba(' + ACCENT + ', 0.08) !important;',
+    '}',
+    '.sdt-outline-section.sdt-outline-on-dark {',
+    '  outline-color: rgba(' + ACCENT_ON_DARK + ', 0.98) !important;',
+    '  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), inset 0 18px 0 0 rgba(' + ACCENT_ON_DARK + ', 0.12) !important;',
+    '}',
+    '.sdt-outline-block.sdt-outline-on-dark {',
+    '  outline-color: rgba(255, 255, 255, 0.36) !important;',
+    '  box-shadow: inset 0 0 0 1px rgba(' + ACCENT_ON_DARK + ', 0.14) !important;',
+    '}',
+    'body.sdt-presentation .sdt-outline-section,',
+    'body.sdt-presentation .sdt-outline-block {',
+    '  outline: none !important;',
+    '  box-shadow: none !important;',
+    '}',
+    'body.sdt-hide .sdt-ref-link,',
+    'body.sdt-presentation .sdt-ref-link {',
+    '  display: none !important;',
     '}',
 
   ].join('\n');
@@ -308,7 +371,8 @@
     '  z-index: 99999;',
     '  display: flex;',
     '  align-items: center;',
-    '  gap: 0;',
+    '  gap: 6px;',
+    '  padding: 4px;',
     '  background: #fff;',
     '  border: 1px solid #E5E7EB;',
     '  border-radius: 6px;',
@@ -321,19 +385,23 @@
     '  pointer-events: auto;',
     '}',
 
-    '.sdt-toolbar__label {',
+    '.sdt-toolbar__cluster {',
     '  all: initial;',
     '  box-sizing: border-box;',
-    '  display: block;',
-    '  padding: 8px 12px;',
-    '  font-family: ' + FONT_UI + ';',
-    '  font-weight: 600;',
-    '  color: #9CA3AF;',
-    '  white-space: nowrap;',
-    '  letter-spacing: 0.3px;',
-    '  text-transform: uppercase;',
-    '  font-size: 0.625rem;',
-    '  line-height: 1.5;',
+    '  display: flex;',
+    '  align-items: center;',
+    '  gap: 4px;',
+    '}',
+
+    '.sdt-toolbar__cluster--primary {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: flex;',
+    '  align-items: center;',
+    '  gap: 4px;',
+    '  padding-right: 6px;',
+    '  margin-right: 2px;',
+    '  border-right: 1px solid #E5E7EB;',
     '}',
 
     '.sdt-toolbar__group {',
@@ -342,37 +410,110 @@
     '  display: flex;',
     '  align-items: center;',
     '  position: relative;',
-    '  border-right: 1px solid #E5E7EB;',
     '}',
-
-    '.sdt-toolbar__group:last-child { border-right: none; }',
 
     '.sdt-toolbar__select {',
     '  all: initial;',
     '  box-sizing: border-box;',
     '  display: flex;',
     '  align-items: center;',
-    '  gap: 4px;',
-    '  padding: 8px 10px;',
-    '  background: transparent;',
-    '  border: none;',
+    '  gap: 6px;',
+    '  padding: 6px 10px;',
+    '  background: #F9FAFB;',
+    '  border: 1px solid transparent;',
+    '  border-radius: 999px;',
     '  cursor: pointer;',
     '  font-family: ' + FONT_UI + ';',
     '  font-size: 0.75rem;',
-    '  font-weight: 600;',
-    '  color: ' + ACCENT_HEX + ';',
+    '  font-weight: 500;',
+    '  color: #111827;',
     '  white-space: nowrap;',
     '  line-height: 1.5;',
-    '  transition: background 0.1s;',
+    '  transition: background 0.1s, border-color 0.1s, color 0.1s;',
     '}',
 
-    '.sdt-toolbar__select:hover { background: #F9FAFB; }',
+    '.sdt-toolbar__select:hover { background: #F3F4F6; border-color: #E5E7EB; }',
+
+    '.sdt-toolbar__select--utility { background: transparent; color: #6B7280; }',
+
+    '.sdt-toolbar__select--active {',
+    '  background: ' + ACCENT_WASH + ';',
+    '  border-color: rgba(' + ACCENT + ', 0.18);',
+    '  color: ' + ACCENT_HEX + ';',
+    '}',
+
+    '.sdt-toolbar__select--diagnostic.sdt-toolbar__select--active {',
+    '  background: rgba(17, 24, 39, 0.05);',
+    '  border-color: rgba(' + ACCENT + ', 0.26);',
+    '  color: #111827;',
+    '  box-shadow: inset 0 0 0 1px rgba(' + ACCENT + ', 0.08);',
+    '}',
+
+    '.sdt-toolbar__select--open {',
+    '  background: #fff;',
+    '  border-color: rgba(' + ACCENT + ', 0.24);',
+    '  box-shadow: 0 0 0 3px rgba(' + ACCENT + ', 0.10);',
+    '}',
+
+    '.sdt-toolbar__select:focus-visible,',
+    '.sdt-toolbar__option:focus-visible,',
+    '.sdt-tree-row:focus-visible,',
+    '.sdt-tree-copy:focus-visible,',
+    '.sdt-tree-panel__close:focus-visible,',
+    '.sdt-toolbar__badge:focus-visible {',
+    '  outline: 2px solid rgba(' + ACCENT + ', 0.58);',
+    '  outline-offset: 2px;',
+    '}',
+
+    '.sdt-toolbar__key {',
+    '  all: initial;',
+    '  font-family: ' + FONT_UI + ';',
+    '  font-size: 0.625rem;',
+    '  font-weight: 600;',
+    '  letter-spacing: 0.3px;',
+    '  text-transform: uppercase;',
+    '  color: #9CA3AF;',
+    '  white-space: nowrap;',
+    '}',
+
+    '.sdt-toolbar__value {',
+    '  all: initial;',
+    '  font-family: ' + FONT_UI + ';',
+    '  font-size: 0.75rem;',
+    '  font-weight: 600;',
+    '  color: inherit;',
+    '  white-space: nowrap;',
+    '}',
+
+    '.sdt-toolbar__select--active .sdt-toolbar__key { color: currentColor; opacity: 0.72; }',
+
+    '.sdt-toolbar__select--diagnostic .sdt-toolbar__key::before {',
+    '  content: "";',
+    '  display: inline-block;',
+    '  width: 6px;',
+    '  height: 6px;',
+    '  margin-right: 6px;',
+    '  border-radius: 50%;',
+    '  background: currentColor;',
+    '  opacity: 0.22;',
+    '  vertical-align: middle;',
+    '}',
+
+    '.sdt-toolbar__select--diagnostic.sdt-toolbar__select--active .sdt-toolbar__key::before {',
+    '  opacity: 0.95;',
+    '}',
 
     '.sdt-toolbar__caret {',
     '  all: initial;',
     '  font-size: 8px;',
     '  color: #9CA3AF;',
     '  margin-left: 2px;',
+    '  transition: transform 0.12s ease, color 0.12s ease;',
+    '}',
+
+    '.sdt-toolbar__select--open .sdt-toolbar__caret {',
+    '  transform: rotate(180deg);',
+    '  color: currentColor;',
     '}',
 
     '.sdt-toolbar__dropdown {',
@@ -447,10 +588,10 @@
     '  box-sizing: border-box;',
     '  display: flex;',
     '  align-items: center;',
-    '  padding: 0 10px;',
+    '  padding: 0 8px 0 4px;',
     '  cursor: pointer;',
     '  position: relative;',
-    '  border-right: 1px solid #E5E7EB;',
+    '  border-radius: 999px;',
     '  text-decoration: none;',
     '  transition: background 0.1s;',
     '  align-self: stretch;',
@@ -486,14 +627,19 @@
 
     // --- Dark mode ---
     ':host-context(html.dark) .sdt-toolbar { background: #27272A; border-color: #3F3F46; }',
-    ':host-context(html.dark) .sdt-toolbar__group { border-right-color: #3F3F46; }',
-    ':host-context(html.dark) .sdt-toolbar__select:hover { background: #3F3F46; }',
+    ':host-context(html.dark) .sdt-toolbar__cluster--primary { border-right-color: #3F3F46; }',
+    ':host-context(html.dark) .sdt-toolbar__select { background: #313136; color: #F3F4F6; }',
+    ':host-context(html.dark) .sdt-toolbar__select:hover { background: #3F3F46; border-color: #52525B; }',
+    ':host-context(html.dark) .sdt-toolbar__select--utility { background: transparent; color: #D1D5DB; }',
+    ':host-context(html.dark) .sdt-toolbar__select--active { background: rgba(' + ACCENT + ', 0.14); border-color: rgba(' + ACCENT + ', 0.25); }',
+    ':host-context(html.dark) .sdt-toolbar__select--diagnostic.sdt-toolbar__select--active { background: rgba(255, 255, 255, 0.07); color: #FFF7ED; }',
+    ':host-context(html.dark) .sdt-toolbar__select--open { background: #3A3A42; border-color: rgba(' + ACCENT + ', 0.35); box-shadow: 0 0 0 3px rgba(' + ACCENT + ', 0.14); }',
+    ':host-context(html.dark) .sdt-toolbar__key { color: #A1A1AA; }',
     ':host-context(html.dark) .sdt-toolbar__dropdown { background: #27272A; border-color: #3F3F46; }',
     ':host-context(html.dark) .sdt-toolbar__option { color: #D1D5DB; }',
     ':host-context(html.dark) .sdt-toolbar__option:hover { background: #3F3F46; }',
     ':host-context(html.dark) .sdt-toolbar__option--active { background: rgba(' + ACCENT + ', 0.12); }',
     ':host-context(html.dark) .sdt-toolbar__hint { border-bottom-color: #3F3F46; }',
-    ':host-context(html.dark) .sdt-toolbar__badge { border-right-color: #3F3F46; }',
     ':host-context(html.dark) .sdt-toolbar__badge:hover { background: #3F3F46; }',
     ':host-context(html.dark) .sdt-toolbar__badge-tip { color: #B1B3B6; }',
 
@@ -529,14 +675,14 @@
     '  box-sizing: border-box;',
     '  position: fixed;',
     '  ' + (treePanelPosMap[position] || treePanelPosMap['bottom-right']),
-    '  width: 300px;',
-    '  max-height: 55vh;',
+    '  width: 340px;',
+    '  max-height: 58vh;',
     '  display: none;',
     '  flex-direction: column;',
     '  background: #fff;',
     '  border: 1px solid #E5E7EB;',
-    '  border-radius: 6px;',
-    '  box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.06);',
+    '  border-radius: 10px;',
+    '  box-shadow: 0 10px 28px rgba(0,0,0,0.14), 0 2px 6px rgba(0,0,0,0.08);',
     '  z-index: 99998;',
     '  overflow: hidden;',
     '  font-family: ' + FONT_UI + ';',
@@ -548,31 +694,96 @@
     '.sdt-tree-panel__header {',
     '  all: initial;',
     '  box-sizing: border-box;',
-    '  display: flex;',
-    '  align-items: center;',
-    '  justify-content: space-between;',
-    '  padding: 8px 12px;',
+    '  display: block;',
+    '  padding: 12px;',
     '  border-bottom: 1px solid #E5E7EB;',
+    '  background: linear-gradient(180deg, rgba(249, 250, 251, 0.98) 0%, rgba(255, 255, 255, 0.98) 100%);',
+    '  font-family: ' + FONT_UI + ';',
+    '  flex-shrink: 0;',
+    '}',
+
+    '.sdt-tree-panel__header-main {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: flex;',
+    '  align-items: flex-start;',
+    '  justify-content: space-between;',
+    '  gap: 10px;',
+    '  font-family: ' + FONT_UI + ';',
+    '}',
+
+    '.sdt-tree-panel__title-wrap {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: flex;',
+    '  flex-direction: column;',
+    '  gap: 6px;',
+    '  min-width: 0;',
+    '  font-family: ' + FONT_UI + ';',
+    '}',
+
+    '.sdt-tree-panel__title {',
+    '  all: initial;',
+    '  display: block;',
+    '  font-family: ' + FONT_UI + ';',
+    '  font-size: 0.8125rem;',
+    '  font-weight: 600;',
+    '  line-height: 1.2;',
+    '  color: #111827;',
+    '}',
+
+    '.sdt-tree-panel__meta {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: flex;',
+    '  flex-wrap: wrap;',
+    '  gap: 6px;',
+    '  font-family: ' + FONT_UI + ';',
+    '}',
+
+    '.sdt-tree-panel__meta-item {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: inline-flex;',
+    '  align-items: center;',
+    '  padding: 2px 7px;',
+    '  border: 1px solid #E5E7EB;',
+    '  border-radius: 999px;',
+    '  background: #F9FAFB;',
     '  font-family: ' + FONT_UI + ';',
     '  font-size: 0.625rem;',
     '  font-weight: 600;',
+    '  color: #6B7280;',
+    '}',
+
+    '.sdt-tree-panel__hint {',
+    '  all: initial;',
+    '  display: block;',
+    '  margin-top: 8px;',
+    '  font-family: ' + FONT_UI + ';',
+    '  font-size: 0.6875rem;',
+    '  line-height: 1.4;',
     '  color: #9CA3AF;',
-    '  text-transform: uppercase;',
-    '  letter-spacing: 0.3px;',
-    '  flex-shrink: 0;',
     '}',
 
     '.sdt-tree-panel__close {',
     '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: inline-flex;',
+    '  align-items: center;',
+    '  justify-content: center;',
+    '  width: 26px;',
+    '  height: 26px;',
     '  cursor: pointer;',
+    '  border: 1px solid #E5E7EB;',
+    '  background: #fff;',
     '  color: #9CA3AF;',
     '  font-size: 14px;',
     '  line-height: 1;',
-    '  padding: 2px 4px;',
-    '  border-radius: 3px;',
-    '  transition: background 0.1s, color 0.1s;',
+    '  border-radius: 999px;',
+    '  transition: background 0.1s, color 0.1s, border-color 0.1s;',
     '}',
-    '.sdt-tree-panel__close:hover { background: #F3F4F6; color: #374151; }',
+    '.sdt-tree-panel__close:hover { background: #FFF7ED; color: #EA580C; border-color: rgba(' + ACCENT + ', 0.24); }',
 
     '.sdt-tree-panel__body {',
     '  all: initial;',
@@ -580,6 +791,8 @@
     '  display: block;',
     '  overflow-y: auto;',
     '  flex: 1;',
+    '  padding: 6px;',
+    '  background: #FCFCFD;',
     '}',
 
     '.sdt-tree-row {',
@@ -587,25 +800,60 @@
     '  box-sizing: border-box;',
     '  display: flex;',
     '  align-items: center;',
-    '  gap: 5px;',
+    '  gap: 8px;',
     '  width: 100%;',
-    '  padding: 5px 10px;',
-    '  cursor: default;',
-    '  transition: background 0.08s;',
+    '  padding: 8px 9px;',
+    '  border: 1px solid transparent;',
+    '  border-radius: 8px;',
+    '  cursor: pointer;',
+    '  transition: background 0.08s, border-color 0.08s, box-shadow 0.08s;',
     '  font-family: ' + FONT_UI + ';',
     '}',
-    '.sdt-tree-row:hover { background: #F9FAFB; }',
+    '.sdt-tree-row:hover { background: #FFF7ED; border-color: rgba(' + ACCENT + ', 0.18); }',
+    '.sdt-tree-row:focus-within { background: #FFF7ED; border-color: rgba(' + ACCENT + ', 0.24); box-shadow: inset 3px 0 0 rgba(' + ACCENT + ', 0.58); }',
+    '.sdt-tree-row--active { background: rgba(' + ACCENT + ', 0.08); border-color: rgba(' + ACCENT + ', 0.24); box-shadow: inset 3px 0 0 rgba(' + ACCENT + ', 0.65); }',
+
+    '.sdt-tree-gutter {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: flex;',
+    '  align-items: center;',
+    '  gap: 0;',
+    '  flex-shrink: 0;',
+    '}',
 
     '.sdt-tree-indent {',
     '  all: initial;',
     '  display: inline-block;',
-    '  width: 10px;',
-    '  height: 1px;',
+    '  box-sizing: border-box;',
+    '  width: 12px;',
+    '  height: 18px;',
+    '  border-left: 1px solid #E5E7EB;',
     '  flex-shrink: 0;',
+    '}',
+    '.sdt-tree-row:hover .sdt-tree-indent,',
+    '.sdt-tree-row--active .sdt-tree-indent {',
+    '  border-left-color: rgba(' + ACCENT + ', 0.24);',
+    '}',
+
+    '.sdt-tree-content {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  min-width: 0;',
+    '  flex: 1;',
+    '  display: flex;',
+    '  align-items: baseline;',
+    '  gap: 8px;',
+    '  font-family: ' + FONT_UI + ';',
     '}',
 
     '.sdt-tree-tag {',
     '  all: initial;',
+    '  display: inline-flex;',
+    '  align-items: center;',
+    '  padding: 2px 6px;',
+    '  border-radius: 999px;',
+    '  background: rgba(' + ACCENT + ', 0.10);',
     '  font-family: ' + FONT_MONO + ';',
     '  font-size: 0.625rem;',
     '  font-weight: 600;',
@@ -618,6 +866,7 @@
     '  all: initial;',
     '  font-family: ' + FONT_MONO + ';',
     '  font-size: 0.688rem;',
+    '  line-height: 1.45;',
     '  color: #374151;',
     '  flex: 1;',
     '  overflow: hidden;',
@@ -628,17 +877,23 @@
     '.sdt-tree-copy {',
     '  all: initial;',
     '  box-sizing: border-box;',
+    '  display: inline-flex;',
+    '  align-items: center;',
+    '  justify-content: center;',
     '  flex-shrink: 0;',
     '  cursor: pointer;',
+    '  border: 1px solid transparent;',
+    '  background: transparent;',
     '  color: #9CA3AF;',
     '  font-size: 12px;',
-    '  padding: 2px 5px;',
-    '  border-radius: 3px;',
-    '  transition: background 0.1s, color 0.1s;',
+    '  width: 26px;',
+    '  height: 26px;',
+    '  border-radius: 999px;',
+    '  transition: background 0.1s, color 0.1s, border-color 0.1s;',
     '  line-height: 1.5;',
     '  font-family: ' + FONT_UI + ';',
     '}',
-    '.sdt-tree-copy:hover { background: #F3F4F6; color: #EA580C; }',
+    '.sdt-tree-copy:hover { background: #fff; color: #EA580C; border-color: rgba(' + ACCENT + ', 0.20); }',
 
     '.sdt-tree-empty {',
     '  all: initial;',
@@ -653,10 +908,23 @@
 
     // Dark mode — tree panel
     ':host-context(html.dark) .sdt-tree-panel { background: #27272A; border-color: #3F3F46; }',
-    ':host-context(html.dark) .sdt-tree-panel__header { border-bottom-color: #3F3F46; }',
-    ':host-context(html.dark) .sdt-tree-row:hover { background: #3F3F46; }',
+    ':host-context(html.dark) .sdt-tree-panel__header { border-bottom-color: #3F3F46; background: linear-gradient(180deg, rgba(39, 39, 42, 0.98) 0%, rgba(24, 24, 27, 0.98) 100%); }',
+    ':host-context(html.dark) .sdt-tree-panel__title { color: #F3F4F6; }',
+    ':host-context(html.dark) .sdt-tree-panel__meta-item { background: #18181B; border-color: #3F3F46; color: #A1A1AA; }',
+    ':host-context(html.dark) .sdt-tree-panel__hint { color: #A1A1AA; }',
+    ':host-context(html.dark) .sdt-tree-panel__close { background: #18181B; border-color: #3F3F46; color: #A1A1AA; }',
+    ':host-context(html.dark) .sdt-tree-panel__close:hover { background: rgba(' + ACCENT + ', 0.12); border-color: rgba(' + ACCENT_ON_DARK + ', 0.34); color: #FDBA74; }',
+    ':host-context(html.dark) .sdt-tree-panel__body { background: #111827; }',
+    ':host-context(html.dark) .sdt-tree-row:hover { background: rgba(' + ACCENT + ', 0.14); border-color: rgba(' + ACCENT_ON_DARK + ', 0.24); }',
+    ':host-context(html.dark) .sdt-tree-row:focus-within { background: rgba(' + ACCENT + ', 0.16); border-color: rgba(' + ACCENT_ON_DARK + ', 0.28); }',
+    ':host-context(html.dark) .sdt-tree-row--active { background: rgba(' + ACCENT + ', 0.18); border-color: rgba(' + ACCENT_ON_DARK + ', 0.28); }',
+    ':host-context(html.dark) .sdt-tree-indent { border-left-color: #3F3F46; }',
+    ':host-context(html.dark) .sdt-tree-row:hover .sdt-tree-indent,',
+    ':host-context(html.dark) .sdt-tree-row--active .sdt-tree-indent { border-left-color: rgba(' + ACCENT_ON_DARK + ', 0.32); }',
+    ':host-context(html.dark) .sdt-tree-tag { background: rgba(' + ACCENT + ', 0.16); color: #FDBA74; }',
     ':host-context(html.dark) .sdt-tree-ref { color: #D1D5DB; }',
-    ':host-context(html.dark) .sdt-tree-copy:hover { background: #3F3F46; }',
+    ':host-context(html.dark) .sdt-tree-copy:hover { background: #18181B; border-color: rgba(' + ACCENT_ON_DARK + ', 0.28); color: #FDBA74; }',
+    ':host-context(html.dark) .sdt-tree-empty { color: #A1A1AA; }',
 
   ].join('\n');
 
@@ -664,8 +932,10 @@
   // ─── Mode + depth display labels ─────────────────────────────
   var MODE_LABELS = { 0: 'Icons', 1: 'Off', 2: 'Full' };
   var DEPTH_LABELS = { 'off': 'Off', 'section': 'Sections', 'block': 'Blocks', 'element': 'Elements' };
+  var OUTLINE_LABELS = { 'off': 'Off', 'section': 'Sections', 'block': 'Blocks' };
   var initModeLabel = MODE_LABELS[state] || 'Icons';
   var initDepthLabel = autoRefEnabled ? (DEPTH_LABELS[autoRefDepth] || 'Sections') : 'Off';
+  var initOutlineLabel = OUTLINE_LABELS[outlineMode] || 'Off';
 
   // ─── Build toolbar DOM ──────────────────────────────────────
   var toolbar = document.createElement('div');
@@ -677,50 +947,78 @@
       S_MARK_SVG +
       '<span class="sdt-toolbar__badge-tip">Powered by Seguru Digital</span>' +
     '</a>' +
-    // ── Mode dropdown ──
-    '<div class="sdt-toolbar__group" data-sdt-group="mode">' +
-      '<div class="sdt-toolbar__label">Labels</div>' +
-      '<button class="sdt-toolbar__select" data-sdt-toggle="mode">' +
-        initModeLabel + ' <span class="sdt-toolbar__caret">&#9662;</span>' +
-      '</button>' +
-      '<div class="sdt-toolbar__dropdown" data-sdt-menu="mode">' +
-        '<div class="sdt-toolbar__hint">Press L to cycle · H to hide all</div>' +
-        '<button class="sdt-toolbar__option' + (state === 2 ? ' sdt-toolbar__option--active' : '') + '" data-sdt-state="2">' +
-          '<span class="sdt-toolbar__option-dot"></span> Full' +
+    '<div class="sdt-toolbar__cluster sdt-toolbar__cluster--primary">' +
+      // ── Mode dropdown ──
+      '<div class="sdt-toolbar__group sdt-toolbar__group--primary" data-sdt-group="mode">' +
+        '<button class="sdt-toolbar__select sdt-toolbar__select--active" data-sdt-toggle="mode">' +
+          '<span class="sdt-toolbar__key">Labels</span>' +
+          '<span class="sdt-toolbar__value">' + initModeLabel + '</span>' +
+          '<span class="sdt-toolbar__caret">&#9662;</span>' +
         '</button>' +
-        '<button class="sdt-toolbar__option' + (state === 0 ? ' sdt-toolbar__option--active' : '') + '" data-sdt-state="0">' +
-          '<span class="sdt-toolbar__option-dot"></span> Icons' +
+        '<div class="sdt-toolbar__dropdown" data-sdt-menu="mode">' +
+          '<div class="sdt-toolbar__hint">Press L to cycle · H to hide all</div>' +
+          '<button class="sdt-toolbar__option' + (state === 2 ? ' sdt-toolbar__option--active' : '') + '" data-sdt-state="2">' +
+            '<span class="sdt-toolbar__option-dot"></span> Full' +
+          '</button>' +
+          '<button class="sdt-toolbar__option' + (state === 0 ? ' sdt-toolbar__option--active' : '') + '" data-sdt-state="0">' +
+            '<span class="sdt-toolbar__option-dot"></span> Icons' +
+          '</button>' +
+          '<button class="sdt-toolbar__option' + (state === 1 ? ' sdt-toolbar__option--active' : '') + '" data-sdt-state="1">' +
+            '<span class="sdt-toolbar__option-dot"></span> Off' +
+          '</button>' +
+        '</div>' +
+      '</div>' +
+      // ── Depth dropdown ──
+      '<div class="sdt-toolbar__group sdt-toolbar__group--primary" data-sdt-group="depth">' +
+        '<button class="sdt-toolbar__select' + (autoRefEnabled ? ' sdt-toolbar__select--active' : '') + '" data-sdt-toggle="depth">' +
+          '<span class="sdt-toolbar__key">Depth</span>' +
+          '<span class="sdt-toolbar__value">' + initDepthLabel + '</span>' +
+          '<span class="sdt-toolbar__caret">&#9662;</span>' +
         '</button>' +
-        '<button class="sdt-toolbar__option' + (state === 1 ? ' sdt-toolbar__option--active' : '') + '" data-sdt-state="1">' +
-          '<span class="sdt-toolbar__option-dot"></span> Off' +
-        '</button>' +
+        '<div class="sdt-toolbar__dropdown" data-sdt-menu="depth">' +
+          '<div class="sdt-toolbar__hint">Press D to cycle</div>' +
+          '<button class="sdt-toolbar__option' + (autoRefEnabled && autoRefDepth === 'element' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="element">' +
+            '<span class="sdt-toolbar__option-dot"></span> Elements — headings, text, images, buttons' +
+          '</button>' +
+          '<button class="sdt-toolbar__option' + (autoRefEnabled && autoRefDepth === 'block' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="block">' +
+            '<span class="sdt-toolbar__option-dot"></span> Blocks — sections + containers' +
+          '</button>' +
+          '<button class="sdt-toolbar__option' + (autoRefEnabled && autoRefDepth === 'section' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="section">' +
+            '<span class="sdt-toolbar__option-dot"></span> Sections — top-level page sections' +
+          '</button>' +
+          '<button class="sdt-toolbar__option' + (!autoRefEnabled ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="off">' +
+            '<span class="sdt-toolbar__option-dot"></span> Off — manual labels only' +
+          '</button>' +
+        '</div>' +
       '</div>' +
     '</div>' +
-    // ── Depth dropdown ──
-    '<div class="sdt-toolbar__group" data-sdt-group="depth">' +
-      '<div class="sdt-toolbar__label">Depth</div>' +
-      '<button class="sdt-toolbar__select" data-sdt-toggle="depth">' +
-        initDepthLabel + ' <span class="sdt-toolbar__caret">&#9662;</span>' +
-      '</button>' +
-      '<div class="sdt-toolbar__dropdown" data-sdt-menu="depth">' +
-        '<div class="sdt-toolbar__hint">Press D to cycle</div>' +
-        '<button class="sdt-toolbar__option' + (autoRefEnabled && autoRefDepth === 'element' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="element">' +
-          '<span class="sdt-toolbar__option-dot"></span> Elements — headings, text, images, buttons' +
+    '<div class="sdt-toolbar__cluster sdt-toolbar__cluster--utility">' +
+      // ── Outline dropdown ──
+      '<div class="sdt-toolbar__group sdt-toolbar__group--utility" data-sdt-group="outline">' +
+        '<button class="sdt-toolbar__select sdt-toolbar__select--utility sdt-toolbar__select--diagnostic' + (outlineMode !== 'off' ? ' sdt-toolbar__select--active' : '') + '" data-sdt-toggle="outline">' +
+          '<span class="sdt-toolbar__key">Outline</span>' +
+          '<span class="sdt-toolbar__value">' + initOutlineLabel + '</span>' +
+          '<span class="sdt-toolbar__caret">&#9662;</span>' +
         '</button>' +
-        '<button class="sdt-toolbar__option' + (autoRefEnabled && autoRefDepth === 'block' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="block">' +
-          '<span class="sdt-toolbar__option-dot"></span> Blocks — sections + containers' +
-        '</button>' +
-        '<button class="sdt-toolbar__option' + (autoRefEnabled && autoRefDepth === 'section' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="section">' +
-          '<span class="sdt-toolbar__option-dot"></span> Sections — top-level page sections' +
-        '</button>' +
-        '<button class="sdt-toolbar__option' + (!autoRefEnabled ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="off">' +
-          '<span class="sdt-toolbar__option-dot"></span> Off — manual labels only' +
+        '<div class="sdt-toolbar__dropdown" data-sdt-menu="outline">' +
+          '<div class="sdt-toolbar__hint">Guide blocks and sections</div>' +
+          '<button class="sdt-toolbar__option' + (outlineMode === 'block' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-outline="block">' +
+            '<span class="sdt-toolbar__option-dot"></span> Blocks — sections plus inner containers' +
+          '</button>' +
+          '<button class="sdt-toolbar__option' + (outlineMode === 'section' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-outline="section">' +
+            '<span class="sdt-toolbar__option-dot"></span> Sections — top-level wrappers only' +
+          '</button>' +
+          '<button class="sdt-toolbar__option' + (outlineMode === 'off' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-outline="off">' +
+            '<span class="sdt-toolbar__option-dot"></span> Off — no spacing guides' +
+          '</button>' +
+        '</div>' +
+      '</div>' +
+      // ── Tree toggle ──
+      '<div class="sdt-toolbar__group sdt-toolbar__group--tree sdt-toolbar__group--utility" data-sdt-group="tree">' +
+        '<button class="sdt-toolbar__select sdt-toolbar__select--utility sdt-toolbar__select--diagnostic" data-sdt-toggle-tree>' +
+          '<span class="sdt-toolbar__value">\u229E Tree</span>' +
         '</button>' +
       '</div>' +
-    '</div>' +
-    // ── Tree toggle ──
-    '<div class="sdt-toolbar__group sdt-toolbar__group--tree" data-sdt-group="tree">' +
-      '<button class="sdt-toolbar__select" data-sdt-toggle-tree>\u229E Tree</button>' +
     '</div>';
 
 
@@ -803,7 +1101,31 @@
     'element': SELECTORS_ELEMENT
   };
 
-  var AUTO_REF_SELECTORS = (AUTO_REF_DEPTH_MAP[autoRefDepth] || SELECTORS_SECTION).join(', ');
+  function collectTargetsByDepth(depthMode) {
+    var selectorList = AUTO_REF_DEPTH_MAP[depthMode] || SELECTORS_SECTION;
+    var candidates = document.querySelectorAll(selectorList.join(', '));
+    var targets = [];
+
+    forEachNode(candidates, function (el) {
+      if (arrayContainsNode(targets, el)) return;
+      if (depthMode !== 'section') {
+        targets.push(el);
+      } else {
+        var dominated = false;
+        for (var j = 0; j < targets.length; j++) {
+          if (targets[j].contains(el)) { dominated = true; break; }
+        }
+        if (!dominated) targets.push(el);
+      }
+    });
+
+    targets.sort(function (a, b) {
+      var pos = a.compareDocumentPosition(b);
+      return (pos & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1;
+    });
+
+    return targets;
+  }
 
   var SEMANTIC_TAGS = ['h1','h2','h3','h4','h5','h6','p','blockquote','img','video','audio','button','a','input','select','textarea','form','table','ul','ol','dl','nav','article','aside','header','footer','figure','figcaption','details','summary','label','legend','section'];
 
@@ -877,26 +1199,7 @@
   function autoRefSections() {
     if (!autoRefEnabled) return;
     var slug = getPageSlug();
-    var allSections = [];
-
-    var candidates = document.querySelectorAll(AUTO_REF_SELECTORS);
-    forEachNode(candidates, function (el) {
-      if (arrayContainsNode(allSections, el)) return;
-      if (autoRefDepth !== 'section') {
-        allSections.push(el);
-      } else {
-        var dominated = false;
-        for (var j = 0; j < allSections.length; j++) {
-          if (allSections[j].contains(el)) { dominated = true; break; }
-        }
-        if (!dominated) allSections.push(el);
-      }
-    });
-
-    allSections.sort(function (a, b) {
-      var pos = a.compareDocumentPosition(b);
-      return (pos & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1;
-    });
+    var allSections = collectTargetsByDepth(autoRefDepth);
 
     for (var i = 0; i < allSections.length; i++) {
       var el = allSections[i];
@@ -916,9 +1219,14 @@
     forEachNode(autoEls, function (el) {
       el.removeAttribute('data-ref');
       el.removeAttribute('data-sdt-auto');
-      var labels = el.querySelectorAll('.sdt-ref-icon, .sdt-ref-tooltip, .sdt-ref-full-label');
+      var labels = el.querySelectorAll('.sdt-ref-link, .sdt-ref-icon, .sdt-ref-tooltip, .sdt-ref-full-label');
       forEachNode(labels, function (label) { label.remove(); });
       delete el[MARKER];
+      delete el._sdtIcon;
+      delete el._sdtLink;
+      delete el._sdtTooltip;
+      delete el._sdtFullLabel;
+      delete el._sdtDepth;
     });
   }
 
@@ -932,7 +1240,6 @@
     } else {
       autoRefEnabled = true;
       autoRefDepth = newDepth;
-      AUTO_REF_SELECTORS = (AUTO_REF_DEPTH_MAP[autoRefDepth] || SELECTORS_SECTION).join(', ');
     }
 
     clearAutoRefs();
@@ -941,15 +1248,170 @@
       autoRefSections();
     }
     injectLabels();
+    resolveLabelOverlaps();
     updateDropdown('depth', 'data-sdt-depth', newDepth, DEPTH_LABELS[newDepth]);
+    applyOutlineMode();
 
     // Rebuild tree panel if open
     if (treeOpen) buildTreePanel();
   }
 
+  function clearOutlines() {
+    var outlined = document.querySelectorAll('.sdt-outline-section, .sdt-outline-block');
+    forEachNode(outlined, function (el) {
+      el.classList.remove('sdt-outline-section');
+      el.classList.remove('sdt-outline-block');
+      el.classList.remove('sdt-outline-on-dark');
+    });
+  }
+
+  function applyOutlineClass(el, className) {
+    var lum = getEffectiveBgLuminance(el);
+    el.classList.add(className);
+    setClassState(el, 'sdt-outline-on-dark', lum < 0.40);
+  }
+
+  function applyOutlineMode() {
+    clearOutlines();
+    if (outlineMode === 'off') return;
+
+    var sectionTargets = collectTargetsByDepth('section');
+    var sectionLookup = [];
+    var blockTargets;
+
+    forEachNode(sectionTargets, function (el) {
+      applyOutlineClass(el, 'sdt-outline-section');
+      sectionLookup.push(el);
+    });
+
+    if (outlineMode !== 'block') return;
+
+    blockTargets = collectTargetsByDepth('block');
+    forEachNode(blockTargets, function (el) {
+      if (arrayContainsNode(sectionLookup, el)) return;
+      applyOutlineClass(el, 'sdt-outline-block');
+    });
+  }
+
+  function setOutline(newMode) {
+    outlineMode = OUTLINE_LABELS[newMode] ? newMode : 'off';
+    applyOutlineMode();
+    updateDropdown('outline', 'data-sdt-outline', outlineMode, OUTLINE_LABELS[outlineMode]);
+  }
+
 
   // ─── Label injection ────────────────────────────────────────
   var MARKER = '_sdtLabelled';
+  var LABEL_BASE_TOP = 2;
+  var LABEL_COLLISION_GAP = 4;
+  var LABEL_OFFSET_STEP = 18;
+  var LABEL_OFFSET_LIMIT = 6;
+  var LABEL_DEPTH_X_STEP = 10;
+  var LABEL_DEPTH_X_CAP = 30;
+  var LABEL_DEPTH_Y_STEP = 6;
+  var LABEL_DEPTH_Y_CAP = 18;
+
+  function getRefDepth(el) {
+    var depth = 0;
+    var parent = el.parentElement;
+    while (parent) {
+      if (parent.hasAttribute('data-ref')) depth++;
+      parent = parent.parentElement;
+    }
+    return depth;
+  }
+
+  function getDepthInset(depth) {
+    var xInset = depth * LABEL_DEPTH_X_STEP;
+    if (xInset > LABEL_DEPTH_X_CAP) xInset = LABEL_DEPTH_X_CAP;
+    return xInset;
+  }
+
+  function getDepthLift(depth) {
+    var yInset = depth * LABEL_DEPTH_Y_STEP;
+    if (yInset > LABEL_DEPTH_Y_CAP) yInset = LABEL_DEPTH_Y_CAP;
+    return yInset;
+  }
+
+  function setLabelOffset(el, offset, depth) {
+    var top = (LABEL_BASE_TOP + offset) + 'px';
+    var xInset = getDepthInset(depth || 0);
+    var icon = el._sdtIcon;
+    var link = el._sdtLink;
+    var tooltip = el._sdtTooltip;
+    var fullLabel = el._sdtFullLabel;
+
+    if (icon) icon.style.top = top;
+    if (link) {
+      link.style.height = offset + 'px';
+      link.style.opacity = offset > 0 ? '1' : '0';
+    }
+    if (tooltip) {
+      tooltip.style.top = top;
+      tooltip.style.left = (22 + xInset) + 'px';
+    }
+    if (fullLabel) {
+      fullLabel.style.top = top;
+      fullLabel.style.left = (2 + xInset) + 'px';
+    }
+  }
+
+  function resetLabelOffsets() {
+    var refs = document.querySelectorAll('[data-ref]');
+    forEachNode(refs, function (el) {
+      el._sdtDepth = getRefDepth(el);
+      setLabelOffset(el, getDepthLift(el._sdtDepth || 0), el._sdtDepth || 0);
+    });
+  }
+
+  function getActiveLabel(el) {
+    if (presentationMode || state === 1) return null;
+    return state === 2 ? el._sdtFullLabel : el._sdtIcon;
+  }
+
+  function resolveLabelOverlaps() {
+    var refs;
+    var placed = [];
+
+    resetLabelOffsets();
+    if (presentationMode || state === 1) return;
+
+    refs = toArray(document.querySelectorAll('[data-ref]'));
+    refs.sort(function (a, b) {
+      var pos = a.compareDocumentPosition(b);
+      return (pos & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1;
+    });
+
+    forEachNode(refs, function (el) {
+      var anchor = getActiveLabel(el);
+      var attempt;
+      var rect;
+      var collision;
+      var i;
+      var preferredOffset;
+
+      if (!anchor) return;
+
+      preferredOffset = getDepthLift(el._sdtDepth || 0);
+
+      for (attempt = 0; attempt < LABEL_OFFSET_LIMIT; attempt++) {
+        setLabelOffset(el, preferredOffset + (attempt * LABEL_OFFSET_STEP), el._sdtDepth || 0);
+        rect = anchor.getBoundingClientRect();
+        collision = false;
+
+        for (i = 0; i < placed.length; i++) {
+          if (rectsOverlap(rect, placed[i], LABEL_COLLISION_GAP)) {
+            collision = true;
+            break;
+          }
+        }
+
+        if (!collision) break;
+      }
+
+      placed.push(anchor.getBoundingClientRect());
+    });
+  }
 
   function injectLabels() {
     var refs = document.querySelectorAll('[data-ref]');
@@ -997,9 +1459,19 @@
         copyRef(refValue);
       });
 
+      var link = document.createElement('span');
+      link.className = 'sdt-ref-link ' + bgClass;
+
+      el.appendChild(link);
       el.appendChild(icon);
       el.appendChild(tooltip);
       el.appendChild(fullLabel);
+      el._sdtIcon = icon;
+      el._sdtLink = link;
+      el._sdtTooltip = tooltip;
+      el._sdtFullLabel = fullLabel;
+      el._sdtDepth = getRefDepth(el);
+      setLabelOffset(el, getDepthLift(el._sdtDepth), el._sdtDepth);
     });
   }
 
@@ -1034,10 +1506,14 @@
   function closeAllDropdowns() {
     var menus = toolbar.querySelectorAll('.sdt-toolbar__dropdown');
     forEachNode(menus, function (m) { m.classList.remove('sdt-toolbar__dropdown--open'); });
+    forEachNode(toolbar.querySelectorAll('[data-sdt-toggle]'), function (trigger) {
+      trigger.classList.remove('sdt-toolbar__select--open');
+    });
   }
 
   function toggleDropdown(name) {
     var menu = toolbar.querySelector('[data-sdt-menu="' + name + '"]');
+    var trigger = toolbar.querySelector('[data-sdt-toggle="' + name + '"]');
     var isOpen = menu.classList.contains('sdt-toolbar__dropdown--open');
     closeAllDropdowns();
     if (isOpen) return;
@@ -1047,6 +1523,7 @@
     menu.style.left = 'auto';
     menu.style.right = 'auto';
     menu.classList.add('sdt-toolbar__dropdown--open');
+    if (trigger) trigger.classList.add('sdt-toolbar__select--open');
 
     var groupRect = menu.parentElement.getBoundingClientRect();
     var menuRect = menu.getBoundingClientRect();
@@ -1066,9 +1543,18 @@
     }
   }
 
+  function shouldTriggerAppearActive(name, activeValue) {
+    if (name === 'mode') return String(activeValue) !== '1';
+    if (name === 'depth') return String(activeValue) !== 'off';
+    if (name === 'outline') return String(activeValue) !== 'off';
+    return false;
+  }
+
   function updateDropdown(name, activeAttr, activeValue, label) {
     var trigger = toolbar.querySelector('[data-sdt-toggle="' + name + '"]');
-    trigger.innerHTML = label + ' <span class="sdt-toolbar__caret">&#9662;</span>';
+    var valueNode = trigger.querySelector('.sdt-toolbar__value');
+    if (valueNode) valueNode.textContent = label;
+    setClassState(trigger, 'sdt-toolbar__select--active', shouldTriggerAppearActive(name, activeValue));
 
     var opts = toolbar.querySelectorAll('[data-sdt-menu="' + name + '"] .sdt-toolbar__option');
     forEachNode(opts, function (opt) {
@@ -1081,11 +1567,56 @@
 
   // ─── Tree panel ─────────────────────────────────────────────
   var treeOpen = false;
+  var treeJumpTimer = null;
+  var treeJumpTarget = null;
   var treePanel = document.createElement('div');
   treePanel.className = 'sdt-tree-panel';
 
+  function clearTreeJumpHighlight() {
+    if (treeJumpTimer) {
+      clearTimeout(treeJumpTimer);
+      treeJumpTimer = null;
+    }
+    if (treeJumpTarget) {
+      treeJumpTarget.classList.remove('sdt-tree-jump-highlight');
+      treeJumpTarget = null;
+    }
+  }
+
+  function clearTreeHoverHighlights() {
+    var highlighted = document.querySelectorAll('.sdt-tree-highlight');
+    forEachNode(highlighted, function (el) {
+      el.classList.remove('sdt-tree-highlight');
+    });
+    if (treePanel) {
+      forEachNode(treePanel.querySelectorAll('.sdt-tree-row--active'), function (row) {
+        row.classList.remove('sdt-tree-row--active');
+      });
+    }
+  }
+
+  function jumpToTreeTarget(target) {
+    clearTreeJumpHighlight();
+    try {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    } catch (err) {
+      target.scrollIntoView();
+    }
+    target.classList.add('sdt-tree-jump-highlight');
+    treeJumpTarget = target;
+    treeJumpTimer = setTimeout(function () {
+      if (treeJumpTarget) treeJumpTarget.classList.remove('sdt-tree-jump-highlight');
+      treeJumpTarget = null;
+      treeJumpTimer = null;
+    }, 1400);
+  }
+
   function buildTreePanel() {
     var refs = toArray(document.querySelectorAll('[data-ref]'));
+    var depthLabel = autoRefEnabled ? (DEPTH_LABELS[autoRefDepth] || 'Sections') : 'Off';
+    var outlineLabel = OUTLINE_LABELS[outlineMode] || 'Off';
+
+    clearTreeHoverHighlights();
 
     refs.sort(function (a, b) {
       return (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1;
@@ -1093,15 +1624,42 @@
 
     var header = document.createElement('div');
     header.className = 'sdt-tree-panel__header';
+    var headerMain = document.createElement('div');
+    headerMain.className = 'sdt-tree-panel__header-main';
+    var titleWrap = document.createElement('div');
+    titleWrap.className = 'sdt-tree-panel__title-wrap';
     var title = document.createElement('span');
-    title.textContent = 'Element Tree' + (refs.length ? ' \u00B7 ' + refs.length : '');
-    var closeBtn = document.createElement('span');
+    title.className = 'sdt-tree-panel__title';
+    title.textContent = 'Element Tree';
+    var meta = document.createElement('div');
+    meta.className = 'sdt-tree-panel__meta';
+    var countMeta = document.createElement('span');
+    countMeta.className = 'sdt-tree-panel__meta-item';
+    countMeta.textContent = refs.length + ' refs';
+    var depthMeta = document.createElement('span');
+    depthMeta.className = 'sdt-tree-panel__meta-item';
+    depthMeta.textContent = 'Depth: ' + depthLabel;
+    var outlineMeta = document.createElement('span');
+    outlineMeta.className = 'sdt-tree-panel__meta-item';
+    outlineMeta.textContent = 'Outline: ' + outlineLabel;
+    meta.appendChild(countMeta);
+    meta.appendChild(depthMeta);
+    meta.appendChild(outlineMeta);
+    titleWrap.appendChild(title);
+    titleWrap.appendChild(meta);
+    var closeBtn = document.createElement('button');
     closeBtn.className = 'sdt-tree-panel__close';
+    closeBtn.type = 'button';
     closeBtn.textContent = '\u00D7';
     closeBtn.title = 'Close tree panel';
     closeBtn.addEventListener('click', function () { toggleTree(); });
-    header.appendChild(title);
-    header.appendChild(closeBtn);
+    headerMain.appendChild(titleWrap);
+    headerMain.appendChild(closeBtn);
+    header.appendChild(headerMain);
+    var hint = document.createElement('div');
+    hint.className = 'sdt-tree-panel__hint';
+    hint.textContent = refs.length ? 'Hover to preview the target. Click a row to jump to it.' : 'Select a depth to begin.';
+    header.appendChild(hint);
 
     var body = document.createElement('div');
     body.className = 'sdt-tree-panel__body';
@@ -1109,7 +1667,7 @@
     if (refs.length === 0) {
       var empty = document.createElement('div');
       empty.className = 'sdt-tree-empty';
-      empty.textContent = 'No labeled elements. Select a depth to begin.';
+      empty.textContent = 'No labeled elements yet.';
       body.appendChild(empty);
     } else {
       forEachNode(refs, function (el) {
@@ -1122,12 +1680,22 @@
 
         var row = document.createElement('div');
         row.className = 'sdt-tree-row';
+        row.tabIndex = 0;
+        row.title = 'Jump to ' + el.getAttribute('data-ref');
+
+        var gutter = document.createElement('div');
+        gutter.className = 'sdt-tree-gutter';
 
         for (var i = 0; i < depth; i++) {
           var indent = document.createElement('span');
           indent.className = 'sdt-tree-indent';
-          row.appendChild(indent);
+          gutter.appendChild(indent);
         }
+
+        row.appendChild(gutter);
+
+        var content = document.createElement('div');
+        content.className = 'sdt-tree-content';
 
         var tag = document.createElement('span');
         tag.className = 'sdt-tree-tag';
@@ -1152,14 +1720,34 @@
         (function (target) {
           row.addEventListener('mouseenter', function () {
             target.classList.add('sdt-tree-highlight');
+            row.classList.add('sdt-tree-row--active');
           });
           row.addEventListener('mouseleave', function () {
             target.classList.remove('sdt-tree-highlight');
+            row.classList.remove('sdt-tree-row--active');
+          });
+          row.addEventListener('focus', function () {
+            target.classList.add('sdt-tree-highlight');
+            row.classList.add('sdt-tree-row--active');
+          });
+          row.addEventListener('blur', function () {
+            target.classList.remove('sdt-tree-highlight');
+            row.classList.remove('sdt-tree-row--active');
+          });
+          row.addEventListener('click', function () {
+            jumpToTreeTarget(target);
+          });
+          row.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ' || e.keyCode === 13 || e.keyCode === 32) {
+              e.preventDefault();
+              jumpToTreeTarget(target);
+            }
           });
         }(el));
 
-        row.appendChild(tag);
-        row.appendChild(ref);
+        content.appendChild(tag);
+        content.appendChild(ref);
+        row.appendChild(content);
         row.appendChild(copyBtn);
         body.appendChild(row);
       });
@@ -1174,8 +1762,16 @@
     treeOpen = !treeOpen;
     setClassState(treePanel, 'sdt-tree-panel--open', treeOpen);
     if (treeOpen) buildTreePanel();
+    else {
+      clearTreeJumpHighlight();
+      clearTreeHoverHighlights();
+    }
     var treeBtn = toolbar.querySelector('[data-sdt-toggle-tree]');
-    if (treeBtn) treeBtn.textContent = treeOpen ? '\u229F Tree' : '\u229E Tree';
+    if (treeBtn) {
+      var treeValue = treeBtn.querySelector('.sdt-toolbar__value');
+      if (treeValue) treeValue.textContent = treeOpen ? '\u229F Tree' : '\u229E Tree';
+      setClassState(treeBtn, 'sdt-toolbar__select--active', treeOpen);
+    }
   }
 
 
@@ -1191,6 +1787,7 @@
     }
 
     updateDropdown('mode', 'data-sdt-state', state, MODE_LABELS[state]);
+    resolveLabelOverlaps();
   }
 
 
@@ -1208,8 +1805,11 @@
     convertClassRefs();
     autoRefSections();
     injectLabels();
+    resolveLabelOverlaps();
+    applyOutlineMode();
 
     if (state !== 0) setState(state);
+    if (outlineMode !== 'off') setOutline(outlineMode);
 
     // Dropdown toggle clicks
     forEachNode(toolbar.querySelectorAll('[data-sdt-toggle]'), function (trigger) {
@@ -1230,6 +1830,13 @@
     forEachNode(toolbar.querySelectorAll('[data-sdt-depth]'), function (opt) {
       opt.addEventListener('click', function () {
         setDepth(opt.getAttribute('data-sdt-depth'));
+      });
+    });
+
+    // Outline option clicks
+    forEachNode(toolbar.querySelectorAll('[data-sdt-outline]'), function (opt) {
+      opt.addEventListener('click', function () {
+        setOutline(opt.getAttribute('data-sdt-outline'));
       });
     });
 
@@ -1279,6 +1886,10 @@
         setDepth(DEPTH_CYCLE[nextIdx]);
       }
     });
+
+    window.addEventListener('resize', function () {
+      resolveLabelOverlaps();
+    });
   }
 
   if (document.readyState === 'loading') {
@@ -1294,10 +1905,14 @@
     getState: function () { return state; },
     setDepth: setDepth,
     getDepth: function () { return autoRefEnabled ? autoRefDepth : 'off'; },
+    setOutline: setOutline,
+    getOutline: function () { return outlineMode; },
     refresh: function () {
       convertClassRefs();
       autoRefSections();
       injectLabels();
+      resolveLabelOverlaps();
+      applyOutlineMode();
       if (treeOpen) buildTreePanel();
     }
   };

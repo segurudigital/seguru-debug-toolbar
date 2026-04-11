@@ -1,7 +1,7 @@
 # Design — IA & UI Spec
 
-**Version:** 1.1
-**Last updated:** 2026-04-10
+**Version:** 1.4
+**Last updated:** 2026-04-11
 
 **Brand authority:** Seguru-Brand-Handbook.md §10 (Product Brand: Seguru Debug Toolbar) — v4.2, April 2026. All colour decisions in this document are formally ratified there. When the handbook and this doc conflict, the handbook wins.
 
@@ -14,18 +14,21 @@ The toolbar has two jobs: show `data-ref` labels and connect back to Seguru as t
 ### Content zones (left to right)
 
 ```
-┌───────────────────────────────────────────────────────────────┐
-│  [S]  │  Labels  [Icons ▾]  │  Depth  [Off ▾]  │             │
-│  ───  │  ─── dropdown ────  │  ─── dropdown ──  │             │
-│ badge │     label mode      │   auto-ref depth  │             │
-└───────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│ [S]  [Labels  Icons ▾] [Depth  Off ▾]  │  [Outline Off ▾] [⊞ Tree]       │
+│      primary controls                  │  utility controls                │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **Badge zone** — The Seguru S mark (16px circle, always Seguru Primary Blue `#00C0F3`, white mark) sits at the far left. On hover, a tooltip reads "Powered by Seguru Digital". Clicking opens seguru.digital in a new tab.
 
-**Labels dropdown** — Controls how labels appear (Icons, Off, Full). Click to open, select an option to apply. Press L to cycle. Replaces the previous row of mode buttons.
+**Labels dropdown** — Controls how labels appear (Icons, Off, Full). Click to open, select an option to apply. Press L to cycle. In the refreshed UI, the control reads as a compact value-led pill instead of a separate label plus value cell.
 
-**Depth dropdown** — Controls auto-ref depth (Off, Sections, Blocks, Elements). Click to open, select a level. Press D to cycle. Dropdowns are position-aware — they flip above/below and left/right based on available viewport space.
+**Depth dropdown** — Controls auto-ref depth (Off, Sections, Blocks, Elements). Click to open, select a level. Press D to cycle. It sits beside Labels as the second primary control because those two settings define the main working state of the product.
+
+**Outline dropdown** — Controls optional layout guides (Off, Sections, Blocks). `Sections` outlines top-level wrappers with a strong orange frame plus a subtle inset wash so the page skeleton reads quickly. `Blocks` keeps those section outlines and adds lighter dashed boundaries for inner containers and blocks, making overlap and spacing relationships visible without needing element-level labels. This lives in the utility zone because it is diagnostic rather than always-primary.
+
+**Tree button** — Opens the floating element tree panel for list-based inspection, click-to-jump navigation, and copy actions. This also lives in the utility zone and should visually read as secondary to Labels and Depth.
 
 ### Why the S mark goes on the left
 
@@ -73,9 +76,23 @@ The brand handbook says the badge "always appears at the bottom of product UIs" 
 | Color (light) | `#9CA3AF` | Existing |
 | Right border | 1px solid `#E5E7EB` | Existing — divides badge zone from controls |
 
+### Label overlap handling
+
+When multiple visible labels would collide in the same viewport zone, labels are vertically staggered in 18px steps with a small depth-based horizontal inset so dense nested states form a clearer stepped stack instead of a purely mechanical vertical shove. A thin leader line is drawn back to the original element corner, and full-mode labels clip cleanly at long widths instead of sprawling across dense layouts.
+
+### Outline guides
+
+Section outlines are intentionally the loudest structural layer: solid orange, thicker stroke, and a faint inset wash to make the page skeleton legible at a glance. Block outlines must remain lighter, dashed, and more schematic so they reveal internal layout without competing with the section layer. On dark sections, both guide types switch to higher-contrast variants automatically; sections use the approved on-dark orange and blocks pick up a lighter guide treatment so they remain visible.
+
+### Tree panel
+
+The Tree panel should read like an inspection surface, not a raw debug list. The header carries the title plus compact context chips (`ref count`, `Depth`, `Outline`) and a short hint line. Rows use a stronger indentation rhythm via guide rails, orange context pills, and a warmer hover state. Hover previews the target element; clicking a row jumps the page to that element and briefly intensifies the highlight so the destination is obvious.
+
 ### Dropdown triggers
 
-Each dropdown shows the current selection as a compact button with a caret (▾). Clicking opens a popover above or below the toolbar (depending on position). Options show a dot indicator, label, and description. The active option is highlighted in orange. A hint at the bottom shows the keyboard shortcut.
+Each dropdown shows the current selection as a compact pill with two text weights: a muted uppercase key (`Labels`, `Depth`, `Outline`) and a stronger value (`Icons`, `Blocks`, `Off`). Clicking opens a popover above or below the toolbar (depending on position). Options show a dot indicator, label, and description. A selected control uses a tinted pill treatment; an open control gets an explicit focus halo and rotated caret so its state is visible even before the menu items are read. A hint at the bottom shows the keyboard shortcut.
+
+Utility controls (`Outline`, `Tree`) use the same interaction model, but when active they shift into a more obviously diagnostic treatment so they feel intentionally secondary but clearly enabled.
 
 ### Tooltip (S mark hover)
 
@@ -84,7 +101,7 @@ Each dropdown shows the current selection as a compact button with a caret (▾)
 | Text | "Powered by Seguru Digital" | Brand handbook §16: compact badge variant |
 | Font family | Open Sans, 400 | Brand handbook §16 badge spec |
 | Font size | 11px | Proportional to toolbar size |
-| Text color (light bg) | `#6C6E71` | Brand handbook §6: muted text |
+| Text color (light bg) | `#FFF7ED` | Matches implemented dark tooltip treatment |
 | Text color (dark bg) | `#B1B3B6` | Brand handbook §6: dark variant |
 | Background | `rgba(17, 24, 39, 0.85)` | Matches existing tooltip style |
 | Border radius | 4px | Brand handbook: badge border radius |
@@ -95,9 +112,9 @@ Each dropdown shows the current selection as a compact button with a caret (▾)
 
 ## Visual hierarchy (priority order)
 
-1. **Dropdown triggers** — the thing you click most, showing current selection
+1. **Primary dropdown triggers** — Labels and Depth, the thing you click most
 2. **data-ref labels on the page** — the main output of the tool
-3. **"Labels" / "Depth" toolbar labels** — orient you to what each dropdown does
+3. **Utility controls** — Outline and Tree, available but visually secondary
 4. **S mark** — brand anchor, passive, noticed but not demanding
 5. **Dropdown menus + hover tooltip** — only appear on interaction
 
@@ -134,7 +151,7 @@ This is the only approved variation of the SDT Orange. Do not use any other oran
 ## States
 
 ### Toolbar at rest
-S mark visible, two dropdown triggers showing current Labels mode and Depth level. Active selection shown in orange text. No dropdowns open, no tooltip.
+S mark visible at the left, followed by the primary control pair (`Labels`, `Depth`), then a quieter utility pair (`Outline`, `Tree`). Active controls use a tinted pill treatment rather than relying on text color alone. No dropdowns open, no tooltip.
 
 ### Hover on S mark
 Tooltip fades in above the icon: "Powered by Seguru Digital". Cursor changes to pointer. A subtle external-link indicator (small arrow or underline on the tooltip text) signals it's a link.

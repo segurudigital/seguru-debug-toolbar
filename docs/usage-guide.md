@@ -2,7 +2,7 @@
 
 ## How it works
 
-The Seguru Debug Toolbar scans the page for any element with a `data-ref` attribute and attaches visual labels to each one. The toolbar appears as a compact bar in the corner of the page with two dropdown controls.
+The Seguru Debug Toolbar scans the page for any element with a `data-ref` attribute and attaches visual labels to each one. The toolbar appears as a compact bar in the corner of the page with three dropdown controls plus the Tree button.
 
 The toolbar and toast render inside a **Shadow DOM** — completely isolated from page styles (Elementor, Bricks, theme CSS, etc.). Label elements in the page DOM use `all: initial` resets to prevent inherited styles from leaking in. No external CSS file needed.
 
@@ -36,7 +36,7 @@ The **Labels** dropdown on the toolbar controls how labels appear. Click it to s
 
 ### Icons (mode 0 — default)
 
-A small orange dot appears at the top-left of each `data-ref` element. Hover the dot to reveal a dark tooltip showing the full ref value. The tooltip also stays visible if the cursor moves from the dot onto the tooltip text. The dot is intentionally subtle so it doesn't interfere with visual review.
+A small orange dot appears at the top-left of each `data-ref` element. Hover the dot to reveal a dark tooltip showing the full ref value. The tooltip also stays visible if the cursor moves from the dot onto the tooltip text. The dot is intentionally subtle so it doesn't interfere with visual review. When nearby labels would collide, the toolbar uses a depth-aware stagger, nudging deeper labels into a cleaner stepped stack and drawing a thin leader line back to the element corner so the reference stays visually anchored.
 
 ### Off (mode 1)
 
@@ -44,7 +44,7 @@ All labels are hidden. The page looks exactly as it would to an end user. Use th
 
 ### Full (mode 2)
 
-A persistent text label appears at the top-left of every `data-ref` element, showing the full ref value at all times. Labels use a dark background with white text for high contrast against any design. This mode is best for QA passes and cross-referencing against copy documents or wireframes.
+A persistent text label appears at the top-left of every `data-ref` element, showing the full ref value at all times. Labels use a dark background with white text for high contrast against any design. This mode is best for QA passes and cross-referencing against copy documents or wireframes. If neighboring labels overlap, the toolbar automatically staggers them in a depth-aware stepped pattern and adds a leader line back to the original element corner. Long labels are clipped cleanly instead of sprawling across dense nested layouts.
 
 ---
 
@@ -80,13 +80,33 @@ Auto-generated ref names include element context: `home-03-heading` for an Eleme
 
 ---
 
+## Outline guides
+
+The **Outline** dropdown adds guide outlines to help you inspect section boundaries, overlapping wrappers, and spacing relationships without turning on dense labels everywhere.
+
+### Off
+
+No guide outlines are shown.
+
+### Sections
+
+Top-level page sections get a stronger orange frame with a subtle inset wash near the top edge. This is the cleanest view when you want to understand the page skeleton or confirm where one section ends and the next begins.
+
+### Blocks
+
+Sections keep the stronger structural frame, and inner blocks/containers get a lighter dashed outline. This is the most useful mode for layout debugging because nested wrappers become visible without the noise of full element-level labels.
+
+On dark hero sections and dark containers, outline contrast is adjusted automatically so the guides still read clearly without overpowering the design.
+
+---
+
 ## Tree panel
 
-The **Tree** button in the toolbar opens a floating panel listing all labeled elements in document order. Elements are indented based on nesting depth — a widget inside a section sits one level deeper than the section itself.
+The **Tree** button in the toolbar opens a floating panel listing all labeled elements in document order. Elements are indented based on nesting depth, and the header shows the current ref count, depth setting, and outline mode so you can keep orientation while inspecting.
 
-Each row shows the element context type (e.g. `section`, `h2`, `widget`) and the full ref value. Hover a row to highlight the corresponding element on the page with an orange outline. Click the copy button (⎘) on any row to copy the ref value.
+Each row shows the element context type (e.g. `section`, `h2`, `widget`) and the full ref value. Hover or focus a row to highlight the corresponding element on the page with an orange outline. Click a row to jump the page to that element and flash a stronger temporary highlight. Click the copy button (⎘) on any row to copy the ref value without jumping.
 
-The tree panel rebuilds automatically when you change depth or call `refresh()`. Use it at Block or Element depth where on-page labels overlap — the tree gives you a clean readable list without the visual noise.
+The tree panel rebuilds automatically when you change depth or call `refresh()`. Use it at Block or Element depth when even collision-managed on-page labels become too dense — the tree gives you a clean readable list without the visual noise.
 
 ---
 
@@ -106,7 +126,7 @@ This makes it easy to grab ref values for bug reports, feedback notes, or code s
 
 ## JavaScript API
 
-The toolbar exposes a global object at `window.seguruDebugToolbar` with three methods:
+The toolbar exposes a global object at `window.seguruDebugToolbar` with seven methods:
 
 ### setState(mode)
 
@@ -148,6 +168,25 @@ var depth = window.seguruDebugToolbar.getDepth();
 console.log(depth); // "section"
 ```
 
+### setOutline(mode)
+
+Set the outline guide mode. Accepts `'off'`, `'section'`, or `'block'`.
+
+```js
+window.seguruDebugToolbar.setOutline('section');
+window.seguruDebugToolbar.setOutline('block');
+window.seguruDebugToolbar.setOutline('off');
+```
+
+### getOutline()
+
+Returns the current outline mode as a string (`'off'`, `'section'`, or `'block'`).
+
+```js
+var outline = window.seguruDebugToolbar.getOutline();
+console.log(outline); // "block"
+```
+
 ### refresh()
 
 Re-scans the DOM for any new `data-ref` elements and attaches labels to them. Already-labelled elements are skipped, so calling this multiple times is safe.
@@ -157,7 +196,7 @@ Re-scans the DOM for any new `data-ref` elements and attaches labels to them. Al
 window.seguruDebugToolbar.refresh();
 ```
 
-This is particularly useful in single-page applications (React, Vue, etc.) where content loads after the initial page render. Call `refresh()` after your route change or data fetch completes.
+This is particularly useful in single-page applications (React, Vue, etc.) where content loads after the initial page render. Call `refresh()` after your route change or data fetch completes. If outline guides are enabled, `refresh()` reapplies them after the rescan.
 
 ---
 
@@ -199,6 +238,6 @@ No polyfills needed. No transpilation needed. The source file is plain ES5-compa
 
 ## Performance
 
-The toolbar does one DOM scan on page load (or when you call `refresh()`) and attaches three small `<span>` elements to each `data-ref` element. On a page with 50 sections, that's 150 extra spans — negligible. The injected `<style>` block handles all show/hide logic via CSS class toggles on `<body>`, so switching modes doesn't trigger any JavaScript DOM walks.
+The toolbar does one DOM scan on page load (or when you call `refresh()`) and attaches four small `<span>` elements to each `data-ref` element. On a page with 50 sections, that's 200 extra spans — still negligible. The injected `<style>` block handles most show/hide logic via CSS class toggles on `<body>`, with a lightweight depth-aware collision pass used to keep overlapping visible labels readable when needed.
 
-The minified file is ~27 KB. No network requests, no external dependencies, no runtime overhead beyond the initial scan.
+The minified file is ~42 KB. No network requests, no external dependencies, no runtime overhead beyond the initial scan.

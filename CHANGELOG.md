@@ -8,6 +8,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ## [Unreleased]
 
+---
+
+## [2.1.0] — 2026-04-11
+
+### Added
+
+- **Outline guides** — New `Outline` dropdown with `Off`, `Sections`, and `Blocks` modes. Section mode adds solid orange boundaries to top-level sections. Block mode keeps those and adds lighter dashed guides for inner containers and blocks to make spacing and overlap issues easier to inspect.
+- `setOutline(mode)` / `getOutline()` — public API helpers for controlling the new outline guide layer.
+- **Label leader lines** — When visible labels collide, the toolbar now staggers them downward and draws a thin leader line back to the original element corner.
+
+### Changed
+
+- **Badge colour sync** — Toolbar S mark now uses `#00C0F3` to match `docs/DESIGN.md`, the WordPress settings footer badge, and the approved Seguru badge treatment across the repo.
+- **`refresh()`** — Reapplies outline guides after the DOM rescan.
+- **Toolbar interaction states** — Active controls now use tinted pill styling, open dropdowns get a clearer focus halo and caret rotation, and diagnostic utility controls (`Outline`, `Tree`) are more visibly distinct when enabled.
+- **Dense label layout** — Overlap handling now uses a depth-aware stepped stack with small horizontal insets for nested refs, and long full-mode labels truncate cleanly to stay readable on crowded pages.
+- **Outline guide contrast** — Section outlines now read as the stronger structural layer, block guides stay lighter and more schematic, and both adapt more clearly on dark sections.
+- **Tree panel UX** — The panel now surfaces ref count, current depth, and outline state in the header, uses clearer indentation and hover rhythm, and supports click-to-jump navigation with a temporary page highlight.
+
 ## [2.0.0] — 2026-04-10
 
 ### Added
@@ -24,7 +43,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 - **Tooltip hover** — Tooltip in Icons mode now only appears when hovering the ⓘ icon dot, not the whole parent element. A second CSS rule keeps the tooltip visible when the cursor moves from the icon onto the tooltip text.
 - **Full mode label contrast** — Full-mode labels updated from near-invisible faint style (`rgba(0,0,0,0.06)` bg) to high-contrast dark background (`rgba(17,24,39,0.82)`) with `#FFF7ED` text, matching the tooltip style used in Icons mode. Hover state uses orange accent.
 - **Toast duration** — Increased from 1400ms to 1800ms.
-- **Badge colour** — Toolbar badge and `SEGURU_BLUE` constant updated to `#002FA7` (correct Seguru brand blue). Orange `#EA580C` remains the functional UI accent.
+- **Badge colour** — Toolbar badge aligned to the Seguru S mark treatment while orange `#EA580C` remains the functional UI accent.
 - **`getPageSlug()`** — Now strips `-wireframe-hf.html` suffix in addition to `-wireframe-lf.html` and `-wireframe.html`.
 - **Public API `refresh()`** — Now also rebuilds the tree panel if it is open.
 

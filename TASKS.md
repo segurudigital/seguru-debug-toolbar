@@ -1,17 +1,17 @@
 # Tasks
 
 **Project:** Seguru Debug Toolbar
-**Version target:** 2.0.0
+**Version target:** 2.1.0
 
 ---
 
 ## Handoff notes
 
-**Last session:** 2026-04-10 (three sessions)
+**Last session:** 2026-04-11 (ten sessions)
 
 **What was done (session 1):**
 - Implemented all v2 features: H key presentation mode, tooltip hover fix, Full mode contrast, adaptive bg luminance labels, Tree panel
-- Fixed audit mismatches: config dual-source merge (wpConfig + seguruDebugConfig), getPageSlug() -wireframe-hf.html suffix, toast duration 1800ms, ACCENT/badge colour aligned to #002FA7
+- Fixed audit mismatches: config dual-source merge (wpConfig + seguruDebugConfig), getPageSlug() -wireframe-hf.html suffix, toast duration 1800ms, and initial badge colour audit work
 - Removed internal planning docs from `docs/endpoint-feedback/` (sanitized for public repo)
 - Created AGENTS.md, TASKS.md, ROADMAP.md
 - Rebuilt dist: `dist/seguru-debug-toolbar.min.js` (~26.7 KB)
@@ -29,32 +29,82 @@
 - Replaced those APIs with loop/helper equivalents and added clipboard fallback on `navigator.clipboard.writeText()` rejection
 - Rebuilt dist after the compatibility cleanup: `dist/seguru-debug-toolbar.min.js` (~27.1 KB)
 
+**What was done (session 4):**
+- Committed and pushed the release-prep snapshot to `main` (`cd83594`, `chore(release): prepare v2.0.0 release`)
+- Added optional outline guides to the toolbar via a new `Outline` dropdown with `Off`, `Sections`, and `Blocks` modes
+- Added `setOutline()` / `getOutline()` to the public API and made `refresh()` reapply outlines after rescans
+- Synced the toolbar S mark back to the approved `docs/DESIGN.md` badge colour (`#00C0F3`) so runtime, docs, and the WordPress settings footer all match
+- Added label collision management: overlapping visible labels now stagger vertically and draw a leader line back to the target element corner
+- Updated README, usage docs, design spec, roadmap, changelog, and handoff notes for the outline control, badge sync, and overlap handling
+
+**What was done (session 5):**
+- Turned the UI refresh direction into a concrete phased checklist in this file
+- Started Phase 1 and refactored the toolbar hierarchy to use compact value-led controls instead of separate mini labels
+- Split the toolbar into primary controls (`Labels`, `Depth`) and utility controls (`Outline`, `Tree`) so the bar reads with clearer hierarchy
+- Reduced visual clutter by moving from segmented table-like cells to pill-style controls, while keeping the current feature set and Shadow DOM architecture
+- Updated the design spec to reflect the Phase 1 toolbar structure
+
+**What was done (session 6):**
+- Completed Phase 2 of the UI refresh in the toolbar layer
+- Strengthened active states beyond orange text alone with tinted pills, border treatment, and open-state focus halos
+- Made utility controls (`Outline`, `Tree`) visually diagnostic when enabled via stronger diagnostic-state styling
+- Standardized hover, open, selected, and keyboard focus states across toolbar controls, dropdown options, tree actions, and the badge
+- Updated task tracking and design notes for the Phase 2 interaction pass
+
+**What was done (session 7):**
+- Completed Phase 3 of the UI refresh in the on-page label layer
+- Refined overlap placement so nested labels use a depth-aware stepped stack instead of a purely vertical shove
+- Added depth-based horizontal inset and lift so dense label groups read more clearly across nested builders and block layouts
+- Improved full-mode readability in dense layouts by clipping long labels cleanly instead of letting them sprawl
+- Updated README, usage docs, design notes, changelog, and handoff tracking for the Phase 3 pass
+
+**What was done (session 8):**
+- Completed Phase 4 and Phase 5 of the UI refresh
+- Strengthened section vs block outline distinction with a more structural section treatment, lighter block guides, and dark-surface-aware outline variants
+- Refreshed the Tree panel into a clearer inspection surface with contextual header chips, improved row spacing and indentation rhythm, and stronger hover/focus affordances
+- Added row click / keyboard jump-to-element behavior with a temporary page highlight so the Tree works as a navigation tool instead of just a list
+- Updated the design spec, usage docs, changelog, and handoff tracking for the outline and Tree refresh
+
+**What was done (session 9):**
+- Ran a scripted browser QA pass against `test/demo.html` using a temporary Playwright harness
+- Verified 28 checks across keyboard flows (`L`, `D`, `H`, `Escape`), outline modes, dark-background outline contrast, Tree hover/copy/jump behavior, and `refresh()` rebuilding
+- Captured temporary QA screenshots for the outline and Tree states to sanity-check the visual pass
+- Synced handoff/planning state so TASKS and ROADMAP reflect the completed Phase 1-5 refresh and the remaining manual QA / commit work
+
+**What was done (session 10):**
+- Bumped the project version from `2.0.0` to `2.1.0` across package metadata and both WordPress plugin entry points
+- Moved the outline / label / Tree refresh work from `Unreleased` into the `2.1.0` changelog release heading
+- Synced release-facing docs and packaging copy, including README install notes, usage-guide build size references, and the WordPress `readme.txt` template in `scripts/build-wp-zip.sh`
+- Rebuilt the JS bundle and WordPress zip for the `2.1.0` release snapshot
+- Committed and pushed the release update to `main`
+
 **Where things were left:**
-- Source, dist, package metadata, and WordPress files are now aligned on `2.0.0`
-- WordPress package build succeeds and outputs `dist/seguru-debug-toolbar-wp-v2.0.0.zip`
-- Demo page now documents `L`, `D`, `H`, Tree, and uses `window.seguruDebugConfig`
-- No git commit, tag, or push has been made yet
+- `main` now includes the pushed `2.1.0` release snapshot for the UI refresh work
+- Scripted demo QA is complete and passed; manual browser QA on a real builder page is still pending
+- Source, dist, package metadata, and WordPress files are aligned on `2.1.0`
+- WordPress package build succeeds and outputs `dist/seguru-debug-toolbar-wp-v2.1.0.zip`
+- No git tag has been created for `v2.0.0` or `v2.1.0` yet
 
 **Next session should:**
-1. Review the final diff and decide whether the release should include the ES5/runtime compatibility cleanup as part of `2.0.0`
-2. Commit: `chore(deploy): bump version to 2.0.0`
-3. Tag: `git tag -a v2.0.0 -m "v2.0.0: H key, tooltip fix, Full contrast, adaptive labels, Tree panel"`
-4. Push with tags
+1. Do the final human visual QA on a real builder page, with special attention to dark hero sections, nested full-label stacks, and Tree jump behavior
+2. Create and push release tags for `v2.0.0` / `v2.1.0` if you want the repo history formalized
+3. Decide whether to move on to npm publish / CDN distribution work from the roadmap
 
 ---
 
-## Sprint: v2.0.0
+## Sprint: v2.1.0
 
 ### Source changes
 - [x] Config dual-source merge (wpConfig + seguruDebugConfig)
 - [x] getPageSlug() -wireframe-hf.html suffix
 - [x] Toast duration 1800ms
-- [x] ACCENT/badge colour #002FA7 (Seguru blue)
+- [x] Badge colour synced to `#00C0F3` (Seguru S mark blue)
 - [x] Feature 1 — H key presentation mode
 - [x] Feature 2 — Tooltip only on direct icon hover
 - [x] Feature 3 — Full mode label contrast
 - [x] Feature 4 — Adaptive label colours (luminance detection)
 - [x] Feature 5 — Tree panel
+- [x] Feature 6 — Outline guides (Off / Sections / Blocks)
 
 ### Repo hygiene
 - [x] Remove docs/endpoint-feedback/ (internal planning docs)
@@ -66,12 +116,46 @@
 - [x] Define product in Seguru-Brand-Handbook.md §10 (v4.2)
 - [x] Update docs/DESIGN.md with SDT tokens, on-dark variant, brand handbook cross-refs
 - [x] Update AGENTS.md with brand authority section
-- [x] Bump version to 2.0.0 everywhere
+- [x] Bump version to 2.1.0 everywhere
 - [x] Update WordPress PHP version headers
 - [x] Update build-wp-zip.sh readme.txt
 - [x] Update test/demo.html with new features
 - [x] npm run build:wp
-- [ ] Git tag and push
+- [ ] Git tag `v2.1.0`
+
+---
+
+## UI Refresh Plan
+
+**Goal:** Reduce toolbar cognitive load, improve hierarchy, and make dense inspection states readable without changing the product architecture.
+
+### Phase 1 — Toolbar hierarchy cleanup
+- [x] Replace mini static labels with value-led controls (`Labels: Icons`, `Depth: Blocks`, etc.)
+- [x] Split the toolbar into primary controls and utility controls
+- [x] Reduce heavy separators / table-like segmentation
+- [x] Integrate the badge more cleanly into the toolbar chrome
+
+### Phase 2 — Active-state polish
+- [x] Strengthen active state beyond orange text alone
+- [x] Make utility modes (`Outline`, `Tree`) visibly diagnostic when enabled
+- [x] Standardize hover, focus, and selected states across all controls
+
+### Phase 3 — On-page label refinement
+- [x] Add collision management for overlapping visible labels
+- [x] Add leader lines so offset labels still point clearly to targets
+- [x] Refine stagger behavior so dense states feel more intentional and less mechanical
+- [x] Improve full-mode readability in heavily nested pages
+
+### Phase 4 — Outline visual design
+- [x] Strengthen section vs block distinction visually
+- [x] Explore subtle section fills to improve nesting comprehension
+- [x] Validate dark-background outline behavior
+
+### Phase 5 — Tree panel refresh
+- [x] Improve Tree panel header hierarchy and context
+- [x] Improve row spacing, indentation rhythm, and hover affordance
+- [x] Add row click-to-jump behavior
+- [x] Decide whether filtering/search is needed after visual polish
 
 ---
 
@@ -80,9 +164,10 @@
 | Date | Decision | Reason |
 |------|----------|--------|
 | 2026-04-10 | Config key for per-page override is `seguruDebugConfig` not a second `sdtConfig` | Avoids collision with the WP-injected `sdtConfig` key; cleaner in wireframe usage |
-| 2026-04-10 | ACCENT colour kept as orange (#EA580C) for UI, SEGURU_BLUE (#002FA7) for badge | Orange is the functional accent (active states, copy feedback), blue is brand-only |
+| 2026-04-10 | ACCENT colour kept as orange (#EA580C) for UI, with the Seguru S mark blue (`#00C0F3`) reserved for the badge | Orange is the functional accent (active states, copy feedback), while the badge must match the approved Seguru mark treatment in `docs/DESIGN.md` |
 | 2026-04-10 | Tree panel position shares toastPosMap offset (64px above toolbar) | Keeps tree panel adjacent to toolbar without overlapping toast |
 | 2026-04-10 | Luminance threshold 0.40 for sdt-on-dark | Midpoint; validated visually — anything below 40% relative luminance is dark enough to warrant white labels |
+| 2026-04-11 | Tree panel search/filter deferred after Phase 5 | Header context, click-to-jump, and improved row rhythm solve the immediate readability problem without adding UI weight yet |
 
 ---
 

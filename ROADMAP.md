@@ -2,7 +2,7 @@
 
 ---
 
-## v2.0.0 — In progress
+## v2.0.0 — Released
 
 **Goal:** Five UX improvements built on top of the v1.x feature set. No breaking changes.
 
@@ -17,15 +17,18 @@
 - [x] Config merge: `wpConfig` (WP-injected) + `seguruDebugConfig` (per-page) dual-source
 - [x] `getPageSlug()` handles `-wireframe-hf.html` suffix
 - [x] Toast duration 1800ms (was 1400ms)
-- [x] Badge colour aligned to `#002FA7` (Seguru blue)
+- [x] Badge colour aligned to `#00C0F3` (Seguru S mark blue)
 
 ---
 
-## v2.1.0 — Planned
+## v2.1.0 — Released
 
-- [ ] **`npm run build:wp` readme.txt** — Update changelog section to reflect 2.x history
-- [ ] **test/demo.html** — Add H key toggle and Tree panel to the interactive demo controls
-- [ ] **WordPress `autoRefDepth` setting** — Expose depth as a WP admin setting (radio group, same as Front-end toolbar)
+- [x] **Outline guides** — Optional `Outline` dropdown with `Sections` and `Blocks` modes for spacing, overlap, and wrapper-boundary QA
+- [x] **UI refresh** — Toolbar hierarchy cleanup, stronger interaction states, depth-aware label overlap handling, clearer outline distinction, and Tree inspection-panel polish
+- [x] **`npm run build:wp` readme.txt** — Updated changelog and feature copy to reflect the 2.x release line
+- [x] **test/demo.html** — Added H key, Outline, and Tree guidance to the interactive demo controls
+- [x] **Depth stays front-end only** — Confirmed `Depth` remains a live toolbar control rather than a wp-admin setting, per the current settings-page design
+- [ ] **Manual builder-page QA** — Validate the full Phase 1-5 refresh on a real builder page as a post-release verification pass
 - [ ] **CI** — GitHub Actions: syntax check + esbuild build on every PR
 
 ---
@@ -36,7 +39,7 @@ Getting the package onto the standard install paths and making it look the part.
 
 ### npm + CDN
 
-- [ ] **Publish to npm** — `npm publish` under `seguru-digital` org once v2.0.0 is tagged and tested. Package name: `seguru-debug-toolbar`.
+- [ ] **Publish to npm** — `npm publish` under `seguru-digital` org once v2.1.0 is tagged and tested. Package name: `seguru-debug-toolbar`.
 - [ ] **CDN availability** — jsDelivr mirrors npm automatically after publish. Canonical CDN URL: `https://cdn.jsdelivr.net/npm/seguru-debug-toolbar/dist/seguru-debug-toolbar.min.js`
 - [ ] **Update README install section** — replace manual download instructions with npm + CDN options once the package is live.
 
@@ -71,7 +74,7 @@ Screenshots reference in `readme.txt` must match the order and count above. The 
 | File | Size | Purpose |
 |------|------|---------|
 | `assets/readme-hero.png` | 1400 × 700px | Hero image for README.md — toolbar + labelled page at a glance |
-| `assets/readme-toolbar-anatomy.png` | 900 × 200px | Annotated toolbar diagram (badge zone, Labels dropdown, Depth dropdown, Tree button) |
+| `assets/readme-toolbar-anatomy.png` | 900 × 200px | Annotated toolbar diagram (badge zone, Labels dropdown, Depth dropdown, Outline dropdown, Tree button) |
 | `assets/readme-tree-panel.png` | 600 × 500px | Tree panel with indented rows, hover highlight active |
 | `assets/readme-dark-mode.png` | 900 × 500px | Dark mode variant side-by-side or overlay |
 

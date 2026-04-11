@@ -106,7 +106,7 @@ Yes. Add `data-ref` attributes to Group block wrappers via custom block attribut
 
 = Does it affect site performance? =
 
-No. The entire plugin is a single 10 KB JavaScript file that only loads for authorized logged-in users. It does one DOM scan, injects lightweight label elements, and uses CSS class toggles for mode switching.
+No. The entire plugin is a single ~42 KB minified JavaScript file that only loads for authorized logged-in users. It does one DOM scan, injects lightweight label elements, and uses CSS class toggles for mode switching.
 
 == Screenshots ==
 
@@ -117,6 +117,13 @@ No. The entire plugin is a single 10 KB JavaScript file that only loads for auth
 5. Dark-background page with adaptive label contrast
 
 == Changelog ==
+
+= 2.1.0 =
+* Added Outline guides for sections and blocks
+* Added leader lines and depth-aware label staggering for dense layouts
+* Refreshed the toolbar hierarchy and interaction states
+* Improved outline contrast on dark sections and nested layouts
+* Upgraded the Tree panel with context chips and click-to-jump navigation
 
 = 2.0.0 =
 * Added presentation mode toggle with the H key

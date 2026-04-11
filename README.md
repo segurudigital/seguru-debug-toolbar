@@ -2,7 +2,7 @@
 
 A tiny, zero-dependency JavaScript tool that turns `data-ref` attributes into a clickable visual overlay. Built for teams who use wireframes, design systems, or component libraries and need a fast way to identify, reference, and QA page sections.
 
-**~27 KB minified. No CSS file. No build step required. Just drop in a script tag.**
+**~42 KB minified. No CSS file. No build step required. Just drop in a script tag.**
 
 Built and maintained by [Seguru Digital](https://seguru.digital), a strategy-first fractional CMO and CTO practice that also builds. We work across brand strategy, marketing, AI, and dev ops for SMBs in the U.S. and Australia. We use this daily across wireframes, WordPress sites, Shopify themes, and PWAs — and we're open-sourcing it because every dev and design team should have this in their toolkit.
 
@@ -10,7 +10,7 @@ Built and maintained by [Seguru Digital](https://seguru.digital), a strategy-fir
 
 ## What it does
 
-Add `data-ref` attributes to any HTML element. The toolbar gives you two dropdown controls:
+Add `data-ref` attributes to any HTML element. The toolbar gives you three dropdown controls plus the Tree button:
 
 **Labels** (press **L** to cycle) — controls how labels appear:
 
@@ -31,7 +31,17 @@ Add `data-ref` attributes to any HTML element. The toolbar gives you two dropdow
 | **Blocks** | Sections + inner containers, widgets, and content blocks. |
 | **Elements** | Sections + all semantic HTML (headings, paragraphs, images, buttons, forms, etc.). |
 
+**Outline** — controls visual guide outlines for spacing and overlap QA:
+
+| Outline | What you see |
+|---------|--------------|
+| **Off** | No guide outlines. |
+| **Sections** | Strong orange section frames with a subtle inset wash to make the page skeleton easier to read. |
+| **Blocks** | Section frames plus lighter dashed guides for inner blocks and containers. |
+
 Click any label to copy the `data-ref` value to your clipboard. A toast confirms the copy.
+
+When nearby labels would overlap, the toolbar uses depth-aware staggering and a thin leader line back to the element corner so the reference still reads clearly.
 
 Press **H** to hide the toolbar and all labels (presentation mode). Press **H** again to restore.
 
@@ -86,7 +96,7 @@ npm run build:wp
 
 Upload via wp-admin → Plugins → Add New → Upload, activate, configure under Settings → Debug Toolbar. An mu-plugin drop-in is also included in `wordpress/seguru-debug-toolbar.php`.
 
-> **npm and CDN installs are coming.** The package will be published to npm once v2.0.0 is tagged. jsDelivr will mirror it automatically after that. See [Roadmap](ROADMAP.md) for status.
+> **npm and CDN installs are coming.** The package will be published to npm once v2.1.0 is tagged. jsDelivr will mirror it automatically after that. See [Roadmap](ROADMAP.md) for status.
 
 ---
 
@@ -117,12 +127,14 @@ The toolbar only loads for administrators, so regular site visitors never see it
 
 - **Zero dependencies** — one self-contained JS file
 - **Shadow DOM isolation** — toolbar renders in a shadow root, immune to page/builder CSS
-- **~27 KB minified** — won't slow anything down
+- **~42 KB minified** — still lightweight enough for front-end QA use
 - **Click-to-copy** — click any label, get the ref value on your clipboard
-- **Dropdown controls** — Labels (Icons/Off/Full) and Depth (Off/Sections/Blocks/Elements) as compact dropdown menus
+- **Dropdown controls** — Labels, Depth, and Outline as compact front-end menus
+- **Outline guides** — optional section/block outlines with stronger section framing, lighter block guides, and dark-surface-aware contrast
+- **Collision-aware labels** — overlapping labels use depth-aware staggering and keep a visible leader line to their target
 - **Keyboard shortcuts** — L cycles label modes, D cycles depth, H toggles presentation mode (skips input fields)
 - **Presentation mode** — H key hides toolbar + all labels for clean screenshots and client demos
-- **Tree panel** — floating element tree with nesting, hover-to-highlight, and per-row copy
+- **Tree panel** — floating element tree with nesting, context chips, hover-to-highlight, row click-to-jump, and per-row copy
 - **Adaptive label colours** — labels automatically invert on dark-background sections
 - **Dark mode** — add `class="dark"` to `<html>` and the toolbar adapts
 - **SPA-friendly** — call `refresh()` after dynamic content loads
