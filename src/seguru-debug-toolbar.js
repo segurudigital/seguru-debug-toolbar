@@ -7,18 +7,23 @@
  *
  * Usage:
  *   <script src="seguru-debug-toolbar.js"></script>
- *   (auto-injects toolbar HTML, CSS, and binds keyboard shortcut)
+ *   (auto-injects toolbar HTML, CSS, and binds keyboard shortcuts)
  *
  * Three modes cycled by clicking buttons or pressing L:
  *   0 = Icons   — small dot per element, hover to see full label
  *   1 = Off     — nothing shown, clean view for screenshots
  *   2 = Full    — always-visible text labels on every element
  *
+ * Press H to toggle presentation mode: hides toolbar + all labels.
+ * Press D to cycle auto-ref depth: Off → Sections → Blocks → Elements.
+ *
  * Click any label to copy the data-ref value to clipboard.
  *
  * Programmatic API:
  *   window.seguruDebugToolbar.setState(0|1|2)
  *   window.seguruDebugToolbar.getState()
+ *   window.seguruDebugToolbar.setDepth('off'|'section'|'block'|'element')
+ *   window.seguruDebugToolbar.getDepth()
  *   window.seguruDebugToolbar.refresh()  // re-scan for new data-ref elements
  */
 (function () {
@@ -28,7 +33,7 @@
   var ACCENT = '234, 88, 12';        // orange — functional UI accent
   var ACCENT_HEX = '#EA580C';
   var ACCENT_WASH = 'rgba(234, 88, 12, 0.08)';
-  var SEGURU_BLUE = '#00C0F3';       // brand primary — badge only
+  var SEGURU_BLUE = '#002FA7';       // brand primary — badge only
   var FONT_MONO = "'SF Mono', 'Fira Code', 'Cascadia Code', monospace";
   var FONT_UI = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
@@ -39,17 +44,77 @@
     '<path fill="#fff" d="M328.35,158.25c0,39.96-32.39,72.35-72.35,72.35s-72.35-32.39-72.35-72.35,32.39-72.35,72.35-72.35,72.35,32.39,72.35,72.35M141.19,624.36h0v520.12c0,69.87,30.78,120.8,92.17,128.41v63.09h44.33v-63.09c61.39-7.61,92.17-58.54,92.17-128.41V480.38c0-50.17-16.33-91-46.67-112,14-17.5,29.17-31.49,29.17-57.78,0-17.25-4.37-38.67-26.63-58.37,28.72-21.35,47.41-55.43,47.41-93.97,0-64.7-52.45-117.15-117.15-117.15s-117.15,52.45-117.15,117.15,52.45,117.15,117.15,117.15c8.86,0,17.46-1.07,25.75-2.93,12.7,9.57,20.26,21.05,21.32,31.55,2.55,25.37-19.72,42.73-59.21,83.02-59.5,61.84-77,81.67-87.5,109.67-11.67,28-15.17,65.33-15.17,112v15.65h0Z M185.52,1105.92h0v-513.54c0-77,23.33-102.67,88.67-171.51,4.67-5.83,10.5-11.67,17.5-18.67,25.67,15.17,33.83,50.17,33.83,110.84v598.76c0,81.67-14,117.84-70,117.84s-70-36.17-70-117.84v-5.88h0Z"/>' +
     '</svg>';
 
-  // Read WordPress config if present (set via wp_localize_script)
-  var wpConfig = (typeof window.sdtConfig !== 'undefined') ? window.sdtConfig : {};
-  var state = parseInt(wpConfig.defaultMode, 10) || 0; // 0=icons, 1=off, 2=full
+  function forEachNode(nodeList, callback) {
+    var i;
+    for (i = 0; i < nodeList.length; i++) {
+      callback(nodeList[i], i);
+    }
+  }
 
-  // Feature flags (set via WP settings or manual sdtConfig)
-  var classConverterEnabled = wpConfig.classConverter === '1' || wpConfig.classConverter === true;
-  var autoRefEnabled = wpConfig.autoRef === '1' || wpConfig.autoRef === true;
-  var autoRefDepth = wpConfig.autoRefDepth || 'section'; // section | block | element
+  function toArray(nodeList) {
+    var arr = [];
+    forEachNode(nodeList, function (node) {
+      arr.push(node);
+    });
+    return arr;
+  }
+
+  function arrayContainsNode(nodes, target) {
+    var i;
+    for (i = 0; i < nodes.length; i++) {
+      if (nodes[i] === target) return true;
+    }
+    return false;
+  }
+
+  function setClassState(el, className, enabled) {
+    if (enabled) {
+      el.classList.add(className);
+    } else {
+      el.classList.remove(className);
+    }
+  }
+
+  function closestMatch(el, selector) {
+    while (el && el !== shadowHost && el !== document && el.nodeType === 1) {
+      if (matchesSelector(el, selector)) return el;
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  function matchesSelector(el, selector) {
+    var matcher = el.matches || el.msMatchesSelector || el.webkitMatchesSelector || el.mozMatchesSelector;
+    if (!matcher) return false;
+    return matcher.call(el, selector);
+  }
+
+  // ─── Config merge: wpConfig (PHP-injected) + sdtConfig (per-page override)
+  // wpConfig is set by WordPress via wp_localize_script under the key 'sdtConfig'.
+  // sdtConfig is a per-page override set directly on window (e.g. in wireframes).
+  // Page-level sdtConfig overrides wpConfig; both fall back to defaults.
+  var wpConfig = (typeof window.sdtConfig !== 'undefined') ? window.sdtConfig : {};
+  var pageConfig = (typeof window.seguruDebugConfig !== 'undefined') ? window.seguruDebugConfig : {};
+  // Merge: pageConfig values win over wpConfig values
+  var config = {};
+  var _keys = ['defaultMode', 'classConverter', 'autoRef', 'autoRefDepth', 'position', 'pageSlug'];
+  for (var _i = 0; _i < _keys.length; _i++) {
+    var _k = _keys[_i];
+    config[_k] = (_k in pageConfig) ? pageConfig[_k] : wpConfig[_k];
+  }
+
+  var state = parseInt(config.defaultMode, 10) || 0; // 0=icons, 1=off, 2=full
+
+  // Feature flags
+  var classConverterEnabled = config.classConverter === '1' || config.classConverter === true;
+  var autoRefEnabled = config.autoRef === '1' || config.autoRef === true;
+  var autoRefDepth = config.autoRefDepth || 'section'; // section | block | element
+
+  // Presentation mode — H key hides toolbar + all labels
+  var presentationMode = false;
 
   // ─── Position config ────────────────────────────────────────
-  var position = wpConfig.position || 'bottom-right';
+  var position = config.position || 'bottom-right';
   var posMap = {
     'bottom-right': 'bottom:20px;right:20px;',
     'bottom-left':  'bottom:20px;left:20px;right:auto;',
@@ -57,6 +122,12 @@
     'top-left':     'top:20px;bottom:auto;left:20px;right:auto;'
   };
   var toastPosMap = {
+    'bottom-right': 'bottom:64px;right:20px;',
+    'bottom-left':  'bottom:64px;left:20px;right:auto;',
+    'top-right':    'top:64px;bottom:auto;right:20px;',
+    'top-left':     'top:64px;bottom:auto;left:20px;right:auto;'
+  };
+  var treePanelPosMap = {
     'bottom-right': 'bottom:64px;right:20px;',
     'bottom-left':  'bottom:64px;left:20px;right:auto;',
     'top-right':    'top:64px;bottom:auto;right:20px;',
@@ -98,7 +169,7 @@
     '  color: rgba(' + ACCENT + ', 0.9);',
     '}',
 
-    // --- Tooltip (shown on hover via CSS) ---
+    // --- Tooltip (shown on icon hover only — not whole-element hover) ---
     '.sdt-ref-tooltip {',
     '  all: initial;',
     '  box-sizing: border-box;',
@@ -122,14 +193,21 @@
     '  user-select: all;',
     '}',
 
-    '[data-ref]:hover .sdt-ref-tooltip,',
+    // Show tooltip when hovering the icon (not the whole element)
     '.sdt-ref-icon:hover + .sdt-ref-tooltip {',
     '  opacity: 1;',
     '  transform: translateX(0);',
     '  pointer-events: auto;',
     '}',
 
-    // --- Full-label mode ---
+    // Keep tooltip visible when mouse moves onto it from the icon
+    '.sdt-ref-tooltip:hover {',
+    '  opacity: 1;',
+    '  transform: translateX(0);',
+    '  pointer-events: auto;',
+    '}',
+
+    // --- Full-label mode: high-contrast dark bg ---
     '.sdt-ref-full-label {',
     '  all: initial;',
     '  box-sizing: border-box;',
@@ -140,9 +218,11 @@
     '  font-size: 10px;',
     '  line-height: 1;',
     '  padding: 2px 4px;',
-    '  background: rgba(0, 0, 0, 0.06);',
-    '  color: rgba(0, 0, 0, 0.4);',
-    '  border-radius: 2px;',
+    '  background: rgba(17, 24, 39, 0.82);',
+    '  color: #FFF7ED;',
+    '  border: 1px solid rgba(255, 255, 255, 0.1);',
+    '  border-radius: 3px;',
+    '  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);',
     '  z-index: 90;',
     '  cursor: pointer;',
     '  pointer-events: auto;',
@@ -151,8 +231,9 @@
     '}',
 
     '.sdt-ref-full-label:hover {',
-    '  background: rgba(' + ACCENT + ', 0.15);',
-    '  color: rgba(' + ACCENT + ', 0.8);',
+    '  background: rgba(234, 88, 12, 0.9);',
+    '  color: #fff;',
+    '  border-color: rgba(255, 255, 255, 0.2);',
     '}',
 
     // --- Element type tag prefix ---
@@ -177,14 +258,42 @@
     // --- Default (icons): full label hidden ---
     'body:not(.sdt-full) .sdt-ref-full-label { display: none !important; }',
 
+    // --- Presentation mode: hide everything ---
+    'body.sdt-presentation .sdt-ref-icon,',
+    'body.sdt-presentation .sdt-ref-tooltip,',
+    'body.sdt-presentation .sdt-ref-full-label { display: none !important; }',
+
+    // --- Adaptive: dark-background variant ---
+    '.sdt-ref-icon.sdt-on-dark {',
+    '  background: rgba(255, 255, 255, 0.18);',
+    '  color: rgba(255, 255, 255, 0.85);',
+    '}',
+    '.sdt-ref-icon.sdt-on-dark:hover {',
+    '  background: rgba(255, 255, 255, 0.32);',
+    '  color: #fff;',
+    '}',
+    '.sdt-ref-full-label.sdt-on-dark {',
+    '  background: rgba(255, 255, 255, 0.88);',
+    '  color: #111827;',
+    '  border-color: rgba(0, 0, 0, 0.08);',
+    '}',
+    '.sdt-ref-full-label.sdt-on-dark:hover {',
+    '  background: #fff;',
+    '  color: #EA580C;',
+    '}',
+
+    // --- Tree panel: element highlight on row hover ---
+    '.sdt-tree-highlight {',
+    '  outline: 2px solid #EA580C !important;',
+    '  outline-offset: 3px !important;',
+    '}',
+
   ].join('\n');
 
   document.head.appendChild(labelCss);
 
 
   // ─── Shadow DOM for toolbar + toast (isolated from page CSS) ─
-  // Toolbar and toast are rendered inside a shadow root so page
-  // styles (Elementor, Bricks, theme CSS) cannot leak in.
   var shadowHost = document.createElement('div');
   shadowHost.id = 'seguru-debug-toolbar-host';
   shadowHost.style.cssText = 'all:initial;position:fixed;top:0;left:0;width:0;height:0;overflow:visible;z-index:99999;pointer-events:none;';
@@ -227,7 +336,6 @@
     '  line-height: 1.5;',
     '}',
 
-    // --- Dropdown trigger ---
     '.sdt-toolbar__group {',
     '  all: initial;',
     '  box-sizing: border-box;',
@@ -267,7 +375,6 @@
     '  margin-left: 2px;',
     '}',
 
-    // --- Dropdown menu (positioned dynamically via JS) ---
     '.sdt-toolbar__dropdown {',
     '  all: initial;',
     '  box-sizing: border-box;',
@@ -335,7 +442,6 @@
     '  border-bottom: 1px solid #F3F4F6;',
     '}',
 
-    // --- Badge zone ---
     '.sdt-toolbar__badge {',
     '  all: initial;',
     '  box-sizing: border-box;',
@@ -417,6 +523,141 @@
     '  transform: translateY(0);',
     '}',
 
+    // --- Tree panel ---
+    '.sdt-tree-panel {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  position: fixed;',
+    '  ' + (treePanelPosMap[position] || treePanelPosMap['bottom-right']),
+    '  width: 300px;',
+    '  max-height: 55vh;',
+    '  display: none;',
+    '  flex-direction: column;',
+    '  background: #fff;',
+    '  border: 1px solid #E5E7EB;',
+    '  border-radius: 6px;',
+    '  box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.06);',
+    '  z-index: 99998;',
+    '  overflow: hidden;',
+    '  font-family: ' + FONT_UI + ';',
+    '  pointer-events: auto;',
+    '}',
+
+    '.sdt-tree-panel--open { display: flex; }',
+
+    '.sdt-tree-panel__header {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: flex;',
+    '  align-items: center;',
+    '  justify-content: space-between;',
+    '  padding: 8px 12px;',
+    '  border-bottom: 1px solid #E5E7EB;',
+    '  font-family: ' + FONT_UI + ';',
+    '  font-size: 0.625rem;',
+    '  font-weight: 600;',
+    '  color: #9CA3AF;',
+    '  text-transform: uppercase;',
+    '  letter-spacing: 0.3px;',
+    '  flex-shrink: 0;',
+    '}',
+
+    '.sdt-tree-panel__close {',
+    '  all: initial;',
+    '  cursor: pointer;',
+    '  color: #9CA3AF;',
+    '  font-size: 14px;',
+    '  line-height: 1;',
+    '  padding: 2px 4px;',
+    '  border-radius: 3px;',
+    '  transition: background 0.1s, color 0.1s;',
+    '}',
+    '.sdt-tree-panel__close:hover { background: #F3F4F6; color: #374151; }',
+
+    '.sdt-tree-panel__body {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: block;',
+    '  overflow-y: auto;',
+    '  flex: 1;',
+    '}',
+
+    '.sdt-tree-row {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: flex;',
+    '  align-items: center;',
+    '  gap: 5px;',
+    '  width: 100%;',
+    '  padding: 5px 10px;',
+    '  cursor: default;',
+    '  transition: background 0.08s;',
+    '  font-family: ' + FONT_UI + ';',
+    '}',
+    '.sdt-tree-row:hover { background: #F9FAFB; }',
+
+    '.sdt-tree-indent {',
+    '  all: initial;',
+    '  display: inline-block;',
+    '  width: 10px;',
+    '  height: 1px;',
+    '  flex-shrink: 0;',
+    '}',
+
+    '.sdt-tree-tag {',
+    '  all: initial;',
+    '  font-family: ' + FONT_MONO + ';',
+    '  font-size: 0.625rem;',
+    '  font-weight: 600;',
+    '  color: #EA580C;',
+    '  white-space: nowrap;',
+    '  flex-shrink: 0;',
+    '}',
+
+    '.sdt-tree-ref {',
+    '  all: initial;',
+    '  font-family: ' + FONT_MONO + ';',
+    '  font-size: 0.688rem;',
+    '  color: #374151;',
+    '  flex: 1;',
+    '  overflow: hidden;',
+    '  text-overflow: ellipsis;',
+    '  white-space: nowrap;',
+    '}',
+
+    '.sdt-tree-copy {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  flex-shrink: 0;',
+    '  cursor: pointer;',
+    '  color: #9CA3AF;',
+    '  font-size: 12px;',
+    '  padding: 2px 5px;',
+    '  border-radius: 3px;',
+    '  transition: background 0.1s, color 0.1s;',
+    '  line-height: 1.5;',
+    '  font-family: ' + FONT_UI + ';',
+    '}',
+    '.sdt-tree-copy:hover { background: #F3F4F6; color: #EA580C; }',
+
+    '.sdt-tree-empty {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: block;',
+    '  padding: 16px 12px;',
+    '  font-family: ' + FONT_UI + ';',
+    '  font-size: 0.75rem;',
+    '  color: #9CA3AF;',
+    '  text-align: center;',
+    '}',
+
+    // Dark mode — tree panel
+    ':host-context(html.dark) .sdt-tree-panel { background: #27272A; border-color: #3F3F46; }',
+    ':host-context(html.dark) .sdt-tree-panel__header { border-bottom-color: #3F3F46; }',
+    ':host-context(html.dark) .sdt-tree-row:hover { background: #3F3F46; }',
+    ':host-context(html.dark) .sdt-tree-ref { color: #D1D5DB; }',
+    ':host-context(html.dark) .sdt-tree-copy:hover { background: #3F3F46; }',
+
   ].join('\n');
 
 
@@ -443,7 +684,7 @@
         initModeLabel + ' <span class="sdt-toolbar__caret">&#9662;</span>' +
       '</button>' +
       '<div class="sdt-toolbar__dropdown" data-sdt-menu="mode">' +
-        '<div class="sdt-toolbar__hint">Press L to cycle</div>' +
+        '<div class="sdt-toolbar__hint">Press L to cycle · H to hide all</div>' +
         '<button class="sdt-toolbar__option' + (state === 2 ? ' sdt-toolbar__option--active' : '') + '" data-sdt-state="2">' +
           '<span class="sdt-toolbar__option-dot"></span> Full' +
         '</button>' +
@@ -476,6 +717,10 @@
           '<span class="sdt-toolbar__option-dot"></span> Off — manual labels only' +
         '</button>' +
       '</div>' +
+    '</div>' +
+    // ── Tree toggle ──
+    '<div class="sdt-toolbar__group sdt-toolbar__group--tree" data-sdt-group="tree">' +
+      '<button class="sdt-toolbar__select" data-sdt-toggle-tree>\u229E Tree</button>' +
     '</div>';
 
 
@@ -490,25 +735,21 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () {
       toast.classList.remove('sdt-toast--visible');
-    }, 1400);
+    }, 1800);
   }
 
 
   // ─── Class-to-Ref Converter ─────────────────────────────────
-  // Converts CSS classes prefixed with `dataref-` into `data-ref` attributes.
-  // Works with every page builder (including free tiers) because they all
-  // support adding CSS classes. Example: class="dataref-home-01-hero"
-  // becomes data-ref="home-01-hero".
   function convertClassRefs() {
     if (!classConverterEnabled) return;
     var els = document.querySelectorAll('[class*="dataref-"]');
-    els.forEach(function (el) {
-      if (el.getAttribute('data-ref')) return; // explicit data-ref wins
+    forEachNode(els, function (el) {
+      if (el.getAttribute('data-ref')) return;
       var classes = el.className.split(/\s+/);
       for (var i = 0; i < classes.length; i++) {
         if (classes[i].indexOf('dataref-') === 0) {
           el.setAttribute('data-ref', classes[i].replace('dataref-', ''));
-          break; // first match wins
+          break;
         }
       }
     });
@@ -516,71 +757,43 @@
 
 
   // ─── Auto-Ref ──────────────────────────────────────────────
-  // Automatically generates data-ref values for major section elements
-  // based on page slug and position. Detects builder-specific wrappers
-  // (Elementor, Bricks, Oxygen) plus generic <section> tags.
-  //
-  // Generated format: {slug}-{nn}  e.g. "about-us-01", "about-us-02"
-  // Elements with an existing data-ref (manual or from class converter)
-  // are counted in the sequence but not overwritten.
-
-  // Selector tiers for auto-ref depth levels
   var SELECTORS_SECTION = [
-    // Elementor (modern flexbox containers)
-    '.e-con:not(.e-con .e-con)',        // top-level containers only
-    // Bricks
+    '.e-con:not(.e-con .e-con)',
     'section.brxe-section',
     '.brxe-container:not(.brxe-container .brxe-container)',
-    // Oxygen
     '.ct-section',
-    // Breakdance
     '.breakdance-section',
-    // Generic HTML5
     'body > section, main > section, [role="main"] > section',
     '#content > section, .site-content > section, .page-content > section',
-    // Fallback: direct children of common wrapper IDs
     '#content > div > section'
   ];
 
   var SELECTORS_BLOCK = SELECTORS_SECTION.concat([
-    // Elementor — nested containers + all widgets
     '.e-con .e-con',
     '[class*="elementor-widget-"]',
-    // Bricks inner blocks
     '.brxe-block', '.brxe-div',
     '[class*="brxe-"]:not(section)',
-    // Oxygen inner
     '.ct-div', '.ct-column',
     '.ct-text-block', '.ct-headline', '.ct-image', '.ct-button',
-    // Breakdance inner
     '.breakdance-column',
     '[class*="breakdance-"]:not([class*="breakdance-section"])',
-    // HTML5 structural
     'article', 'aside', 'nav',
-    // Gutenberg blocks
     '.wp-block-group', '.wp-block-column', '.wp-block-columns',
     '.wp-block-cover', '.wp-block-media-text',
     '[class*="wp-block-"]'
   ]);
 
-  // Element depth targets semantic content AND builder widgets directly,
-  // skipping generic wrapper divs so you see meaningful context.
   var SELECTORS_ELEMENT = SELECTORS_SECTION.concat([
-    // Semantic HTML
     'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
     'p', 'blockquote', 'figure', 'figcaption', 'img', 'video', 'audio',
     'a[href]', 'button', 'input', 'select', 'textarea',
     'form', 'table', 'ul', 'ol', 'dl',
     'article', 'aside', 'nav', 'header', 'footer',
     'details', 'summary', 'label', 'legend',
-    // Elementor widgets (specific, not generic .elementor-widget wrapper)
     '[class*="elementor-widget-"]',
-    // Bricks elements
     '[class*="brxe-"]',
-    // Oxygen elements
     '.ct-text-block', '.ct-headline', '.ct-image', '.ct-button',
     '.ct-link-text', '.ct-video', '.ct-icon', '.ct-fancy-image',
-    // Breakdance elements
     '[class*="breakdance-"]'
   ]);
 
@@ -592,73 +805,83 @@
 
   var AUTO_REF_SELECTORS = (AUTO_REF_DEPTH_MAP[autoRefDepth] || SELECTORS_SECTION).join(', ');
 
-  // Extract a human-readable context string from an element.
-  // Prefers the actual HTML tag for semantic elements, and for
-  // builder wrappers (divs) looks inside for the real content tag.
   var SEMANTIC_TAGS = ['h1','h2','h3','h4','h5','h6','p','blockquote','img','video','audio','button','a','input','select','textarea','form','table','ul','ol','dl','nav','article','aside','header','footer','figure','figcaption','details','summary','label','legend','section'];
 
   function getElementContext(el) {
     var tag = el.tagName.toLowerCase();
-
-    // If the element itself is semantic, use the tag directly
     if (SEMANTIC_TAGS.indexOf(tag) !== -1) return tag;
 
-    // Generic wrapper (div/span) — look inside for the primary content element
     var heading = el.querySelector('h1, h2, h3, h4, h5, h6');
     if (heading) return heading.tagName.toLowerCase();
 
     var content = el.querySelector('img, video, audio, button, a, p, form, table, blockquote, figure');
     if (content) return content.tagName.toLowerCase();
 
-    // Fall back to builder widget class for context
     var cls = el.className || '';
-
-    // Elementor: "elementor-widget-heading" → "heading"
     var eMatch = cls.match(/elementor-widget-([\w-]+)/);
     if (eMatch) return eMatch[1];
-
-    // Bricks: "brxe-heading" → "heading"
     var bMatch = cls.match(/brxe-([\w-]+)/);
     if (bMatch) return bMatch[1];
-
-    // Oxygen: "ct-headline" → "headline"
     var oMatch = cls.match(/ct-([\w-]+)/);
     if (oMatch) return oMatch[1];
-
-    // Breakdance: "breakdance-form" → "form"
     var dMatch = cls.match(/breakdance-([\w-]+)/);
     if (dMatch && dMatch[1] !== 'section' && dMatch[1] !== 'column') return dMatch[1];
-
-    // Gutenberg: "wp-block-cover" → "cover"
     var gMatch = cls.match(/wp-block-([\w-]+)/);
     if (gMatch) return gMatch[1];
 
-    // Fallback: tag name
     return tag;
   }
 
   function getPageSlug() {
-    var path = window.location.pathname
-      .replace(/^\/|\/$/g, '')   // trim slashes
-      .replace(/\//g, '-');      // sub-paths become hyphens
-    return path || 'home';       // root = "home"
+    // Allow manual override
+    if (config.pageSlug) return config.pageSlug;
+
+    var path = window.location.pathname;
+
+    if (window.location.protocol === 'file:') {
+      var filename = path.split('/').pop() || '';
+      var slug = filename
+        .replace(/-wireframe-lf\.html$/i, '')
+        .replace(/-wireframe-hf\.html$/i, '')
+        .replace(/-wireframe\.html$/i, '')
+        .replace(/\.html$/i, '');
+      return slug || 'home';
+    }
+
+    path = path.replace(/^\/|\/$/g, '').replace(/\//g, '-');
+    return path || 'home';
+  }
+
+  // ─── Background luminance detection ────────────────────────
+  // Walks up the DOM to find the first non-transparent background,
+  // then returns its relative luminance (0=black, 1=white).
+  function getEffectiveBgLuminance(el) {
+    var current = el;
+    while (current && current !== document.documentElement) {
+      var bg = window.getComputedStyle(current).backgroundColor;
+      if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+        var match = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+        if (match) {
+          var r = parseInt(match[1]) / 255;
+          var g = parseInt(match[2]) / 255;
+          var b = parseInt(match[3]) / 255;
+          // WCAG relative luminance formula
+          return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        }
+      }
+      current = current.parentElement;
+    }
+    return 1; // default: assume light
   }
 
   function autoRefSections() {
     if (!autoRefEnabled) return;
     var slug = getPageSlug();
-    var seen = new WeakSet();     // dedup: same element matched by multiple selectors
     var allSections = [];
 
-    // Gather unique section elements in DOM order
     var candidates = document.querySelectorAll(AUTO_REF_SELECTORS);
-    candidates.forEach(function (el) {
-      if (seen.has(el)) return;
-      seen.add(el);
-
-      // At section depth, skip elements nested inside another matched
-      // section (avoids double-labelling). At block/element depth,
-      // allow nesting so inner widgets and content are labelled.
+    forEachNode(candidates, function (el) {
+      if (arrayContainsNode(allSections, el)) return;
       if (autoRefDepth !== 'section') {
         allSections.push(el);
       } else {
@@ -670,13 +893,11 @@
       }
     });
 
-    // Sort by document position
     allSections.sort(function (a, b) {
       var pos = a.compareDocumentPosition(b);
       return (pos & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1;
     });
 
-    // Assign sequential refs, skip elements that already have one
     for (var i = 0; i < allSections.length; i++) {
       var el = allSections[i];
       if (!el.getAttribute('data-ref')) {
@@ -692,11 +913,11 @@
   // ─── Clear auto-ref'd labels (for depth switching) ─────────
   function clearAutoRefs() {
     var autoEls = document.querySelectorAll('[data-sdt-auto]');
-    autoEls.forEach(function (el) {
+    forEachNode(autoEls, function (el) {
       el.removeAttribute('data-ref');
       el.removeAttribute('data-sdt-auto');
       var labels = el.querySelectorAll('.sdt-ref-icon, .sdt-ref-tooltip, .sdt-ref-full-label');
-      labels.forEach(function (label) { label.remove(); });
+      forEachNode(labels, function (label) { label.remove(); });
       delete el[MARKER];
     });
   }
@@ -714,50 +935,51 @@
       AUTO_REF_SELECTORS = (AUTO_REF_DEPTH_MAP[autoRefDepth] || SELECTORS_SECTION).join(', ');
     }
 
-    // Clear previous auto-refs and rescan
     clearAutoRefs();
     if (autoRefEnabled) {
       convertClassRefs();
       autoRefSections();
     }
     injectLabels();
-
     updateDropdown('depth', 'data-sdt-depth', newDepth, DEPTH_LABELS[newDepth]);
+
+    // Rebuild tree panel if open
+    if (treeOpen) buildTreePanel();
   }
 
 
   // ─── Label injection ────────────────────────────────────────
-  // Tracks which elements already have labels to avoid duplicates on refresh()
   var MARKER = '_sdtLabelled';
 
   function injectLabels() {
     var refs = document.querySelectorAll('[data-ref]');
 
-    refs.forEach(function (el) {
-      if (el[MARKER]) return; // already labelled
+    forEachNode(refs, function (el) {
+      if (el[MARKER]) return;
       el[MARKER] = true;
 
       var refValue = el.getAttribute('data-ref');
       var elContext = getElementContext(el);
 
-      // Ensure the element can hold absolutely-positioned children
+      // Adaptive background class
+      var lum = getEffectiveBgLuminance(el);
+      var bgClass = lum < 0.40 ? 'sdt-on-dark' : 'sdt-on-light';
+
       var pos = window.getComputedStyle(el).position;
       if (pos === 'static') el.style.position = 'relative';
 
-      // Icon dot
       var icon = document.createElement('span');
-      icon.className = 'sdt-ref-icon';
-      icon.textContent = '\u24D8'; // ⓘ
-      icon.title = elContext + ' · ' + refValue + ' (click to copy)';
+      icon.className = 'sdt-ref-icon ' + bgClass;
+      icon.textContent = '\u24D8';
+      icon.title = elContext + ' \u00B7 ' + refValue + ' (click to copy)';
       icon.addEventListener('click', function (e) {
         e.stopPropagation();
         e.preventDefault();
         copyRef(refValue);
       });
 
-      // Tooltip (shown on hover)
       var tooltip = document.createElement('span');
-      tooltip.className = 'sdt-ref-tooltip';
+      tooltip.className = 'sdt-ref-tooltip ' + bgClass;
       tooltip.innerHTML = '<span class="sdt-ref-tag">' + elContext + '</span> \u00B7 ' + refValue;
       tooltip.addEventListener('click', function (e) {
         e.stopPropagation();
@@ -765,9 +987,8 @@
         copyRef(refValue);
       });
 
-      // Full label (always visible in full mode)
       var fullLabel = document.createElement('span');
-      fullLabel.className = 'sdt-ref-full-label';
+      fullLabel.className = 'sdt-ref-full-label ' + bgClass;
       fullLabel.innerHTML = '<span class="sdt-ref-tag">' + elContext + '</span> \u00B7 ' + refValue;
       fullLabel.title = 'Click to copy: ' + refValue;
       fullLabel.addEventListener('click', function (e) {
@@ -788,25 +1009,31 @@
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(value).then(function () {
         showToast(value);
+      }, function () {
+        fallbackCopyRef(value);
       });
     } else {
-      var temp = document.createElement('textarea');
-      temp.value = value;
-      temp.style.position = 'fixed';
-      temp.style.opacity = '0';
-      document.body.appendChild(temp);
-      temp.select();
-      document.execCommand('copy');
-      document.body.removeChild(temp);
-      showToast(value);
+      fallbackCopyRef(value);
     }
+  }
+
+  function fallbackCopyRef(value) {
+    var temp = document.createElement('textarea');
+    temp.value = value;
+    temp.style.position = 'fixed';
+    temp.style.opacity = '0';
+    document.body.appendChild(temp);
+    temp.select();
+    document.execCommand('copy');
+    document.body.removeChild(temp);
+    showToast(value);
   }
 
 
   // ─── Dropdown helpers ────────────────────────────────────────
   function closeAllDropdowns() {
     var menus = toolbar.querySelectorAll('.sdt-toolbar__dropdown');
-    menus.forEach(function (m) { m.classList.remove('sdt-toolbar__dropdown--open'); });
+    forEachNode(menus, function (m) { m.classList.remove('sdt-toolbar__dropdown--open'); });
   }
 
   function toggleDropdown(name) {
@@ -815,27 +1042,23 @@
     closeAllDropdowns();
     if (isOpen) return;
 
-    // Reset position before measuring
     menu.style.top = 'auto';
     menu.style.bottom = 'auto';
     menu.style.left = 'auto';
     menu.style.right = 'auto';
     menu.classList.add('sdt-toolbar__dropdown--open');
 
-    // Measure available space
     var groupRect = menu.parentElement.getBoundingClientRect();
     var menuRect = menu.getBoundingClientRect();
     var vw = window.innerWidth;
     var vh = window.innerHeight;
 
-    // Vertical: open above or below the toolbar
     if (groupRect.top > vh - groupRect.bottom) {
       menu.style.bottom = 'calc(100% + 6px)';
     } else {
       menu.style.top = 'calc(100% + 6px)';
     }
 
-    // Horizontal: align left or right edge
     if (groupRect.left + menuRect.width > vw) {
       menu.style.right = '0';
     } else {
@@ -844,18 +1067,115 @@
   }
 
   function updateDropdown(name, activeAttr, activeValue, label) {
-    // Update trigger text
     var trigger = toolbar.querySelector('[data-sdt-toggle="' + name + '"]');
     trigger.innerHTML = label + ' <span class="sdt-toolbar__caret">&#9662;</span>';
 
-    // Update active option
     var opts = toolbar.querySelectorAll('[data-sdt-menu="' + name + '"] .sdt-toolbar__option');
-    opts.forEach(function (opt) {
-      opt.classList.toggle('sdt-toolbar__option--active',
-        opt.getAttribute(activeAttr) === String(activeValue));
+    forEachNode(opts, function (opt) {
+      setClassState(opt, 'sdt-toolbar__option--active', opt.getAttribute(activeAttr) === String(activeValue));
     });
 
     closeAllDropdowns();
+  }
+
+
+  // ─── Tree panel ─────────────────────────────────────────────
+  var treeOpen = false;
+  var treePanel = document.createElement('div');
+  treePanel.className = 'sdt-tree-panel';
+
+  function buildTreePanel() {
+    var refs = toArray(document.querySelectorAll('[data-ref]'));
+
+    refs.sort(function (a, b) {
+      return (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1;
+    });
+
+    var header = document.createElement('div');
+    header.className = 'sdt-tree-panel__header';
+    var title = document.createElement('span');
+    title.textContent = 'Element Tree' + (refs.length ? ' \u00B7 ' + refs.length : '');
+    var closeBtn = document.createElement('span');
+    closeBtn.className = 'sdt-tree-panel__close';
+    closeBtn.textContent = '\u00D7';
+    closeBtn.title = 'Close tree panel';
+    closeBtn.addEventListener('click', function () { toggleTree(); });
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+
+    var body = document.createElement('div');
+    body.className = 'sdt-tree-panel__body';
+
+    if (refs.length === 0) {
+      var empty = document.createElement('div');
+      empty.className = 'sdt-tree-empty';
+      empty.textContent = 'No labeled elements. Select a depth to begin.';
+      body.appendChild(empty);
+    } else {
+      forEachNode(refs, function (el) {
+        var depth = 0;
+        var ancestor = el.parentElement;
+        while (ancestor) {
+          if (ancestor.hasAttribute('data-ref')) depth++;
+          ancestor = ancestor.parentElement;
+        }
+
+        var row = document.createElement('div');
+        row.className = 'sdt-tree-row';
+
+        for (var i = 0; i < depth; i++) {
+          var indent = document.createElement('span');
+          indent.className = 'sdt-tree-indent';
+          row.appendChild(indent);
+        }
+
+        var tag = document.createElement('span');
+        tag.className = 'sdt-tree-tag';
+        tag.textContent = getElementContext(el);
+
+        var ref = document.createElement('span');
+        ref.className = 'sdt-tree-ref';
+        ref.textContent = el.getAttribute('data-ref');
+        ref.title = el.getAttribute('data-ref');
+
+        var copyBtn = document.createElement('button');
+        copyBtn.className = 'sdt-tree-copy';
+        copyBtn.textContent = '\u2398';
+        copyBtn.title = 'Copy';
+        (function (refVal) {
+          copyBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            copyRef(refVal);
+          });
+        }(el.getAttribute('data-ref')));
+
+        (function (target) {
+          row.addEventListener('mouseenter', function () {
+            target.classList.add('sdt-tree-highlight');
+          });
+          row.addEventListener('mouseleave', function () {
+            target.classList.remove('sdt-tree-highlight');
+          });
+        }(el));
+
+        row.appendChild(tag);
+        row.appendChild(ref);
+        row.appendChild(copyBtn);
+        body.appendChild(row);
+      });
+    }
+
+    treePanel.innerHTML = '';
+    treePanel.appendChild(header);
+    treePanel.appendChild(body);
+  }
+
+  function toggleTree() {
+    treeOpen = !treeOpen;
+    setClassState(treePanel, 'sdt-tree-panel--open', treeOpen);
+    if (treeOpen) buildTreePanel();
+    var treeBtn = toolbar.querySelector('[data-sdt-toggle-tree]');
+    if (treeBtn) treeBtn.textContent = treeOpen ? '\u229F Tree' : '\u229E Tree';
   }
 
 
@@ -876,7 +1196,6 @@
 
   // ─── Init ───────────────────────────────────────────────────
   function init() {
-    // Mount toolbar + toast inside shadow DOM for style isolation
     document.body.appendChild(shadowHost);
     var shadow = shadowHost.attachShadow({ mode: 'open' });
     var style = document.createElement('style');
@@ -884,17 +1203,16 @@
     shadow.appendChild(style);
     shadow.appendChild(toolbar);
     shadow.appendChild(toast);
+    shadow.appendChild(treePanel);
 
-    // Run converters before scanning for labels
     convertClassRefs();
     autoRefSections();
     injectLabels();
 
-    // Apply initial state (may differ from 0 if configured via WP)
     if (state !== 0) setState(state);
 
     // Dropdown toggle clicks
-    toolbar.querySelectorAll('[data-sdt-toggle]').forEach(function (trigger) {
+    forEachNode(toolbar.querySelectorAll('[data-sdt-toggle]'), function (trigger) {
       trigger.addEventListener('click', function (e) {
         e.stopPropagation();
         toggleDropdown(trigger.getAttribute('data-sdt-toggle'));
@@ -902,40 +1220,59 @@
     });
 
     // Mode option clicks
-    toolbar.querySelectorAll('[data-sdt-state]').forEach(function (opt) {
+    forEachNode(toolbar.querySelectorAll('[data-sdt-state]'), function (opt) {
       opt.addEventListener('click', function () {
         setState(parseInt(opt.getAttribute('data-sdt-state'), 10));
       });
     });
 
     // Depth option clicks
-    toolbar.querySelectorAll('[data-sdt-depth]').forEach(function (opt) {
+    forEachNode(toolbar.querySelectorAll('[data-sdt-depth]'), function (opt) {
       opt.addEventListener('click', function () {
         setDepth(opt.getAttribute('data-sdt-depth'));
       });
     });
 
+    // Tree panel toggle
+    var treeToggleBtn = toolbar.querySelector('[data-sdt-toggle-tree]');
+    if (treeToggleBtn) {
+      treeToggleBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        toggleTree();
+      });
+    }
+
     // Close dropdowns on click outside (shadow root)
     shadow.addEventListener('click', function (e) {
-      if (!e.target.closest('[data-sdt-toggle]') && !e.target.closest('.sdt-toolbar__dropdown')) {
+      if (!closestMatch(e.target, '[data-sdt-toggle]') && !closestMatch(e.target, '.sdt-toolbar__dropdown')) {
         closeAllDropdowns();
       }
     });
 
     // Close dropdowns on click outside (main document)
-    document.addEventListener('click', function () {
-      closeAllDropdowns();
+    document.addEventListener('click', function (e) {
+      if (!shadowHost.contains(e.target) && e.target !== shadowHost) {
+        closeAllDropdowns();
+      }
     });
 
-    // Keyboard shortcuts: L cycles modes, D cycles depth, Escape closes dropdowns
+    // Keyboard shortcuts
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') { closeAllDropdowns(); return; }
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.isContentEditable) return;
+
+      if (e.key === 'h' || e.key === 'H') {
+        presentationMode = !presentationMode;
+        shadowHost.style.display = presentationMode ? 'none' : '';
+        setClassState(document.body, 'sdt-presentation', presentationMode);
+      }
+
       if (e.key === 'l' || e.key === 'L') {
         var MODE_CYCLE = [1, 0, 2]; // Off → Icons → Full
         var nextMode = MODE_CYCLE[(MODE_CYCLE.indexOf(state) + 1) % MODE_CYCLE.length];
         setState(nextMode);
       }
+
       if (e.key === 'd' || e.key === 'D') {
         var currentIdx = autoRefEnabled ? DEPTH_CYCLE.indexOf(autoRefDepth) : 0;
         var nextIdx = (currentIdx + 1) % DEPTH_CYCLE.length;
@@ -944,7 +1281,6 @@
     });
   }
 
-  // Wait for DOM if needed
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
@@ -958,7 +1294,12 @@
     getState: function () { return state; },
     setDepth: setDepth,
     getDepth: function () { return autoRefEnabled ? autoRefDepth : 'off'; },
-    refresh: function () { convertClassRefs(); autoRefSections(); injectLabels(); }
+    refresh: function () {
+      convertClassRefs();
+      autoRefSections();
+      injectLabels();
+      if (treeOpen) buildTreePanel();
+    }
   };
 
 })();

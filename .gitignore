@@ -2,3 +2,8 @@ node_modules/
 .DS_Store
 *.log
 .wp-build-tmp/
+
+# Internal planning docs — not for public repo
+docs/endpoint-feedback/
+docs/_internal/
+.claude/

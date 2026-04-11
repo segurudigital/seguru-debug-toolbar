@@ -1,7 +1,9 @@
 # Design — IA & UI Spec
 
-**Version:** 1.0
-**Last updated:** 2026-04-08
+**Version:** 1.1
+**Last updated:** 2026-04-10
+
+**Brand authority:** Seguru-Brand-Handbook.md §10 (Product Brand: Seguru Debug Toolbar) — v4.2, April 2026. All colour decisions in this document are formally ratified there. When the handbook and this doc conflict, the handbook wins.
 
 ---
 
@@ -52,13 +54,13 @@ The brand handbook says the badge "always appears at the bottom of product UIs" 
 | Property | Value | Source |
 |----------|-------|--------|
 | Size | 16px diameter circle | Brand handbook: compact badge icon = 16px |
-| Background | `#00C0F3` (Seguru Primary Blue) | Brand handbook §15 |
-| Mark | White S figure (inline SVG) | Brand handbook §15 |
+| Background | `#00C0F3` (Seguru Primary Blue) | Brand handbook §16 |
+| Mark | White S figure (inline SVG) | Brand handbook §16 |
 | Margin | 0 left, 0 right (contained within the badge zone padding) | — |
 | Cursor | Pointer | Clickable |
-| Link target | `https://seguru.digital` (new tab) | Brand handbook: badge links to seguru.digital |
-| Hover tooltip | "Powered by Seguru Digital" | Brand handbook: compact badge text |
-| Border radius | 50% (circle) | Brand handbook |
+| Link target | `https://seguru.digital` (new tab) | Brand handbook §16: badge links to seguru.digital |
+| Hover tooltip | "Powered by Seguru Digital" | Brand handbook §16: compact badge text |
+| Border radius | 50% (circle) | Brand handbook §16 |
 
 ### "data-ref" label
 
@@ -79,11 +81,11 @@ Each dropdown shows the current selection as a compact button with a caret (▾)
 
 | Property | Value | Source |
 |----------|-------|--------|
-| Text | "Powered by Seguru Digital" | Brand handbook: compact badge variant |
-| Font family | Open Sans, 400 | Brand handbook §15 badge spec |
+| Text | "Powered by Seguru Digital" | Brand handbook §16: compact badge variant |
+| Font family | Open Sans, 400 | Brand handbook §16 badge spec |
 | Font size | 11px | Proportional to toolbar size |
-| Text color (light bg) | `#6C6E71` | Brand handbook: muted text |
-| Text color (dark bg) | `#B1B3B6` | Brand handbook: dark variant |
+| Text color (light bg) | `#6C6E71` | Brand handbook §6: muted text |
+| Text color (dark bg) | `#B1B3B6` | Brand handbook §6: dark variant |
 | Background | `rgba(17, 24, 39, 0.85)` | Matches existing tooltip style |
 | Border radius | 4px | Brand handbook: badge border radius |
 | Position | Above the S mark, centered | Doesn't overlap toolbar controls |
@@ -105,13 +107,27 @@ The S mark should feel like it belongs there — part of the furniture, not a st
 
 ## Colour separation
 
-The toolbar uses two colour families that never overlap:
+The toolbar uses two colour families that never overlap. This rule is formally documented in the brand handbook at §10.
 
-**Orange** (`#EA580C` / rgba 234,88,12) — all functional elements. Mode button active states, label dots, ref icon backgrounds, ref tooltips, full-mode labels. This is the working colour.
+**Orange** (`#EA580C` / `--color-sdt-primary`) — all functional elements. Label dots, ref icon backgrounds, full-mode label text, tree panel row hover highlight, active selection indicator, toast border. This is the working colour.
 
-**Blue** (`#00C0F3`) — Seguru badge only. The S mark circle. Nothing else in the toolbar uses this blue. Per the brand handbook, the Seguru endorsement always uses the core brand colours, even inside a product context.
+**Blue** (`#00C0F3`) — Seguru badge only. The S mark circle. Nothing else in the toolbar uses this blue. Per the brand handbook §10, the Seguru endorsement always uses the core brand colours, even inside a product context. This never changes, even in dark mode.
 
 This separation means the badge reads as a brand element instantly, without needing text to explain it.
+
+### SDT Design Tokens (formally defined in brand handbook §20)
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--color-sdt-primary` | `#EA580C` | All functional orange elements |
+| `--color-sdt-dark` | `#111827` | Dark mode toolbar bg, tooltip overlays, tree panel |
+| `--color-sdt-wash` | `#F9FAFB` | Product page alt section backgrounds |
+
+### On-dark orange variant
+
+When a label sits over a dark-background element (detected via WCAG relative luminance — threshold 0.40), the `sdt-on-dark` class is applied. The orange label dot shifts to `#F97316` (one step lighter in the orange scale) to maintain contrast. The ref icon also lightens accordingly.
+
+This is the only approved variation of the SDT Orange. Do not use any other orange shade.
 
 ---
 
@@ -127,4 +143,14 @@ Tooltip fades in above the icon: "Powered by Seguru Digital". Cursor changes to 
 Opens `https://seguru.digital` in a new tab. No other toolbar state changes.
 
 ### Dark mode
-S mark stays `#00C0F3` (brand handbook: always Seguru Primary Blue regardless of context). Tooltip text switches to `#B1B3B6`. Everything else follows existing dark mode rules.
+S mark stays `#00C0F3` (brand handbook §10: always Seguru Primary Blue regardless of context — this is a hard rule). Toolbar BG shifts to `#27272A`. Border shifts to `#3F3F46`. SDT Orange (`#EA580C`) stays the same — it passes contrast on the dark toolbar background. Tooltip text switches to `#B1B3B6`. Tree panel background uses `--color-sdt-dark` (`#111827`).
+
+---
+
+## Relationship to brand handbook
+
+This document is the implementation-level spec. The brand handbook (§10 Product Brand: Seguru Debug Toolbar) is the brand-level authority. They should always agree. If you find a conflict:
+
+1. The handbook wins on: colour values, S mark rules, badge behaviour, tone, positioning
+2. This doc wins on: pixel dimensions, z-index, exact CSS values, shadow DOM behaviour
+3. When in doubt, raise it and update both

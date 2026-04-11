@@ -2,7 +2,7 @@
 
 A tiny, zero-dependency JavaScript tool that turns `data-ref` attributes into a clickable visual overlay. Built for teams who use wireframes, design systems, or component libraries and need a fast way to identify, reference, and QA page sections.
 
-**~18 KB minified. No CSS file. No build step required. Just drop in a script tag.**
+**~27 KB minified. No CSS file. No build step required. Just drop in a script tag.**
 
 Built and maintained by [Seguru Digital](https://seguru.digital), a strategy-first fractional CMO and CTO practice that also builds. We work across brand strategy, marketing, AI, and dev ops for SMBs in the U.S. and Australia. We use this daily across wireframes, WordPress sites, Shopify themes, and PWAs — and we're open-sourcing it because every dev and design team should have this in their toolkit.
 
@@ -20,7 +20,9 @@ Add `data-ref` attributes to any HTML element. The toolbar gives you two dropdow
 | **Off** | Clean view. Nothing shown — good for screenshots and client presentations. |
 | **Full** | Always-visible label on every element. Best for QA, cross-referencing copy docs, and revision feedback. |
 
-**Depth** (press **D** to cycle) — controls what gets auto-labelled:
+**Depth** (press **D** to cycle) — controls what gets auto-labelled (also switchable from the toolbar):
+
+
 
 | Depth | What gets labelled |
 |-------|-------------------|
@@ -30,6 +32,10 @@ Add `data-ref` attributes to any HTML element. The toolbar gives you two dropdow
 | **Elements** | Sections + all semantic HTML (headings, paragraphs, images, buttons, forms, etc.). |
 
 Click any label to copy the `data-ref` value to your clipboard. A toast confirms the copy.
+
+Press **H** to hide the toolbar and all labels (presentation mode). Press **H** again to restore.
+
+The **Tree** button opens a side panel listing every labeled element in document order with nesting indentation. Hover a row to highlight the element on the page. Click the copy button to grab the ref.
 
 ```html
 <!-- Your markup -->
@@ -42,7 +48,7 @@ Click any label to copy the `data-ref` value to your clipboard. A toast confirms
 </section>
 
 <!-- That's it. The toolbar finds them automatically. -->
-<script src="https://cdn.jsdelivr.net/npm/seguru-debug-toolbar/dist/seguru-debug-toolbar.min.js"></script>
+<script src="seguru-debug-toolbar.min.js"></script>
 ```
 
 ---
@@ -59,52 +65,28 @@ We use it for wireframe QA, copy review, client revision rounds, and debugging b
 
 ## Install
 
-**npm:**
+**Manual (any project):**
 
-```bash
-npm install seguru-debug-toolbar
-```
-
-**CDN (jsDelivr auto-mirrors npm):**
+Download `dist/seguru-debug-toolbar.min.js` from this repo and drop it in your project. Include it with a script tag:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/seguru-debug-toolbar/dist/seguru-debug-toolbar.min.js"></script>
+<script src="path/to/seguru-debug-toolbar.min.js"></script>
 ```
 
-**Manual:** Download `dist/seguru-debug-toolbar.min.js` and include it however you like.
+The toolbar auto-injects itself. No CSS file, no init call needed.
 
----
+**WordPress:**
 
-## Quick start
-
-### Script tag
-
-```html
-<script src="node_modules/seguru-debug-toolbar/dist/seguru-debug-toolbar.min.js"></script>
-```
-
-The toolbar auto-injects itself into the page. No CSS file needed, no init call needed.
-
-### Bundler (Vite, Webpack, etc.)
-
-```js
-import 'seguru-debug-toolbar';
-```
-
-The IIFE runs on import and sets everything up.
-
-### WordPress
-
-An installable plugin and an mu-plugin are both included. See [WordPress Setup](docs/wordpress.md) for the full walkthrough.
-
-Build the WordPress plugin zip:
+Build the installable plugin zip:
 
 ```bash
 npm run build:wp
-# → dist/seguru-debug-toolbar-wp.zip
+# → dist/seguru-debug-toolbar-wp-vX.Y.Z.zip
 ```
 
-Upload the zip through wp-admin, activate, enable under Settings. Done.
+Upload via wp-admin → Plugins → Add New → Upload, activate, configure under Settings → Debug Toolbar. An mu-plugin drop-in is also included in `wordpress/seguru-debug-toolbar.php`.
+
+> **npm and CDN installs are coming.** The package will be published to npm once v2.0.0 is tagged. jsDelivr will mirror it automatically after that. See [Roadmap](ROADMAP.md) for status.
 
 ---
 
@@ -126,7 +108,7 @@ The toolbar only loads for administrators, so regular site visitors never see it
 | [WordPress Setup](docs/wordpress.md) | Installable plugin, mu-plugin, capability gating, Gutenberg blocks, client handoff |
 | [Page Builders](docs/page-builders.md) | Built-in class converter, auto-ref, plus manual setup for Elementor, Bricks, Oxygen, Breakdance, Gutenberg |
 | [Naming Conventions](docs/naming-conventions.md) | `data-ref` patterns for websites, web apps, and multi-surface products |
-| [Design](docs/design.md) | IA, UI spec, colour system, badge placement, and visual hierarchy |
+| [Design](docs/DESIGN.md) | IA, UI spec, colour system, badge placement, and visual hierarchy |
 | [WP Settings Page](docs/wp-settings-page.md) | IA and UI spec for the WordPress admin settings page |
 
 ---
@@ -135,10 +117,13 @@ The toolbar only loads for administrators, so regular site visitors never see it
 
 - **Zero dependencies** — one self-contained JS file
 - **Shadow DOM isolation** — toolbar renders in a shadow root, immune to page/builder CSS
-- **~18 KB minified** — won't slow anything down
+- **~27 KB minified** — won't slow anything down
 - **Click-to-copy** — click any label, get the ref value on your clipboard
 - **Dropdown controls** — Labels (Icons/Off/Full) and Depth (Off/Sections/Blocks/Elements) as compact dropdown menus
-- **Keyboard shortcuts** — L cycles label modes, D cycles depth levels (skips input fields)
+- **Keyboard shortcuts** — L cycles label modes, D cycles depth, H toggles presentation mode (skips input fields)
+- **Presentation mode** — H key hides toolbar + all labels for clean screenshots and client demos
+- **Tree panel** — floating element tree with nesting, hover-to-highlight, and per-row copy
+- **Adaptive label colours** — labels automatically invert on dark-background sections
 - **Dark mode** — add `class="dark"` to `<html>` and the toolbar adapts
 - **SPA-friendly** — call `refresh()` after dynamic content loads
 - **WordPress plugin included** — installable zip or mu-plugin, admin-only, dedicated settings page
@@ -155,10 +140,10 @@ The toolbar only loads for administrators, so regular site visitors never see it
 ```bash
 git clone https://github.com/seguru-digital/seguru-debug-toolbar.git
 cd seguru-debug-toolbar
-npm install
-npm run build       # → dist/seguru-debug-toolbar.min.js
-npm run build:wp    # → dist/seguru-debug-toolbar-wp.zip (WordPress plugin)
-npm run dev         # → watch mode with auto-rebuild
+npm install                  # installs esbuild (dev dependency only)
+npm run build                # → dist/seguru-debug-toolbar.min.js
+npm run build:wp             # → dist/seguru-debug-toolbar-wp-vX.Y.Z.zip
+npm run dev                  # watch mode with auto-rebuild
 ```
 
 ---

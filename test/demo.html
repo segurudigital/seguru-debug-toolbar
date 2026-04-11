@@ -35,6 +35,9 @@
     <label><input type="checkbox" id="toggle-cc"> Class Converter</label>
     <label><input type="checkbox" id="toggle-ar"> Auto-Ref</label>
     <hr class="demo-sep">
+    <div>Keys: <strong>L</strong> labels, <strong>D</strong> depth, <strong>H</strong> hide</div>
+    <div>Use the toolbar <strong>Tree</strong> button to inspect the label map.</div>
+    <hr class="demo-sep">
     <button onclick="location.reload()" style="padding:4px 8px;font-size:11px;cursor:pointer;border:1px solid #D1D5DB;border-radius:3px;background:#fff;">Reload</button>
   </div>
 
@@ -72,13 +75,13 @@
   </footer>
 
   <script>
-    // Read feature flag checkboxes and set sdtConfig before the toolbar loads
+    // Read feature flag checkboxes and set seguruDebugConfig before the toolbar loads
     (function () {
       var params = new URLSearchParams(window.location.search);
       var cc = params.get('cc') === '1';
       var ar = params.get('ar') === '1';
 
-      window.sdtConfig = {
+      window.seguruDebugConfig = {
         classConverter: cc ? '1' : '0',
         autoRef: ar ? '1' : '0'
       };

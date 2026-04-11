@@ -23,6 +23,13 @@ cp "$ROOT_DIR/wordpress/seguru-debug-toolbar/seguru-debug-toolbar.php" "$TMP_DIR
 cp "$DIST_DIR/seguru-debug-toolbar.min.js" "$TMP_DIR/seguru-debug-toolbar/assets/"
 cp "$ROOT_DIR/LICENSE" "$TMP_DIR/seguru-debug-toolbar/"
 
+# Copy WordPress.org assets (banner, icon, screenshots) if present
+if [ -d "$ROOT_DIR/assets" ]; then
+  cp "$ROOT_DIR/assets"/wp-banner-*.png  "$TMP_DIR/seguru-debug-toolbar/assets/" 2>/dev/null || true
+  cp "$ROOT_DIR/assets"/wp-icon-*.png    "$TMP_DIR/seguru-debug-toolbar/assets/" 2>/dev/null || true
+  cp "$ROOT_DIR/assets"/screenshot-*.png "$TMP_DIR/seguru-debug-toolbar/assets/" 2>/dev/null || true
+fi
+
 # Create readme.txt for WordPress plugin directory conventions
 cat > "$TMP_DIR/seguru-debug-toolbar/readme.txt" << 'EOF'
 === Seguru Debug Toolbar ===
@@ -52,11 +59,15 @@ Seguru Debug Toolbar is a lightweight developer tool that turns `data-ref` attri
 **Key features:**
 
 * Press **L** to cycle between modes
+* Press **H** to hide the toolbar and all labels for screenshots
+* Press **D** to cycle auto-ref depth between Sections, Blocks, and Elements
+* Toggle the **Tree** panel to browse all labeled elements in document order
 * Click any label to copy the section code to your clipboard
 * Configurable position (any corner of the screen)
 * Role-based access control (Administrator, Editor, or Author)
 * Dark mode support
-* Zero external dependencies — one self-contained 10 KB JS file
+* Adaptive label contrast on dark backgrounds
+* Zero external dependencies — one self-contained JavaScript file
 * Built-in help docs on the settings page
 
 **For agencies and freelancers:** Give clients the plugin so they can identify exactly which section has an issue. They click the label, copy the code, and paste it in their email. You search your codebase for that code and find the block in seconds. No more "the thing at the top needs to change."
@@ -101,22 +112,26 @@ No. The entire plugin is a single 10 KB JavaScript file that only loads for auth
 
 1. The toolbar in Icons mode — small dots on each section, hover to reveal
 2. Full mode — all labels visible for QA passes
-3. Settings page in wp-admin — configure mode, position, and access
-4. Click any label to copy the section code to clipboard
+3. Tree panel — browse labeled elements in document order with copy buttons
+4. Settings page in wp-admin — configure mode, position, and access
+5. Dark-background page with adaptive label contrast
 
 == Changelog ==
 
-= 1.0.0 =
-* Initial release
-* Three viewing modes: Icons, Off, Full
-* Keyboard shortcut (L) to cycle modes
-* Click-to-copy with toast confirmation
-* Configurable default mode, position, and role-based access
-* Dark mode support
-* Built-in help documentation on settings page
-* Powered by Seguru Digital badge
-* Elementor Pro, Bricks Builder, and Oxygen Builder support documented
-* Elementor Free workaround via CSS class-to-attribute snippet
+= 2.0.0 =
+* Added presentation mode toggle with the H key
+* Added auto-ref depth cycling with the D key
+* Added Tree panel for browsing and copying labeled elements
+* Improved tooltip hover behavior so it only opens from the icon
+* Improved Full mode label contrast and dark-background label visibility
+* Added dual-source config support for WordPress and per-page overrides
+* Updated Seguru product branding and badge colour alignment
+
+= 1.3.0 =
+* Added auto-ref generation for supported builders and standard HTML sections
+* Added class-to-ref conversion for builder workflows
+* Added front-end depth controls for Sections, Blocks, and Elements
+* Expanded WordPress settings-page documentation
 EOF
 
 # Inject version into readme.txt

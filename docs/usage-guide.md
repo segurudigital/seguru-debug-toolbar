@@ -36,7 +36,7 @@ The **Labels** dropdown on the toolbar controls how labels appear. Click it to s
 
 ### Icons (mode 0 — default)
 
-A small orange dot appears at the top-left of each `data-ref` element. Hover over the dot (or anywhere on the element) to reveal a dark tooltip showing the full ref value. The dot is intentionally subtle so it doesn't interfere with visual review.
+A small orange dot appears at the top-left of each `data-ref` element. Hover the dot to reveal a dark tooltip showing the full ref value. The tooltip also stays visible if the cursor moves from the dot onto the tooltip text. The dot is intentionally subtle so it doesn't interfere with visual review.
 
 ### Off (mode 1)
 
@@ -44,7 +44,15 @@ All labels are hidden. The page looks exactly as it would to an end user. Use th
 
 ### Full (mode 2)
 
-A persistent text label appears at the top-left of every `data-ref` element, showing the full ref value at all times. The labels use a light background and muted text so they're readable without being too distracting. This mode is best for QA passes and cross-referencing against copy documents or wireframes.
+A persistent text label appears at the top-left of every `data-ref` element, showing the full ref value at all times. Labels use a dark background with white text for high contrast against any design. This mode is best for QA passes and cross-referencing against copy documents or wireframes.
+
+---
+
+## Presentation mode
+
+Press **H** to instantly hide the toolbar and all labels from the page. Press **H** again to restore everything. This is separate from the Off label mode — Off hides labels but keeps the toolbar visible. Presentation mode hides both.
+
+Use it before taking screenshots, recording demos, or presenting to a client on a shared screen when you don't want the toolbar visible.
 
 ---
 
@@ -69,6 +77,22 @@ Everything in Sections, plus inner containers, columns, widgets, and content blo
 Everything in Sections, plus all semantic HTML — headings (`h1`–`h6`), paragraphs, images, buttons, forms, tables, lists, and builder widgets. The densest view, useful for pinpointing specific elements during debugging.
 
 Auto-generated ref names include element context: `home-03-heading` for an Elementor heading widget, `home-05-h2` for a bare `<h2>`, `home-07-cover` for a Gutenberg cover block.
+
+---
+
+## Tree panel
+
+The **Tree** button in the toolbar opens a floating panel listing all labeled elements in document order. Elements are indented based on nesting depth — a widget inside a section sits one level deeper than the section itself.
+
+Each row shows the element context type (e.g. `section`, `h2`, `widget`) and the full ref value. Hover a row to highlight the corresponding element on the page with an orange outline. Click the copy button (⎘) on any row to copy the ref value.
+
+The tree panel rebuilds automatically when you change depth or call `refresh()`. Use it at Block or Element depth where on-page labels overlap — the tree gives you a clean readable list without the visual noise.
+
+---
+
+## Adaptive label colours
+
+Labels automatically detect whether they sit on a light or dark background. Elements with dark hero images or coloured backgrounds receive inverted label styling — light icons and white full-mode labels — so they stay legible without manual configuration.
 
 ---
 
@@ -177,4 +201,4 @@ No polyfills needed. No transpilation needed. The source file is plain ES5-compa
 
 The toolbar does one DOM scan on page load (or when you call `refresh()`) and attaches three small `<span>` elements to each `data-ref` element. On a page with 50 sections, that's 150 extra spans — negligible. The injected `<style>` block handles all show/hide logic via CSS class toggles on `<body>`, so switching modes doesn't trigger any JavaScript DOM walks.
 
-The minified file is ~18 KB. No network requests, no external dependencies, no runtime overhead beyond the initial scan.
+The minified file is ~27 KB. No network requests, no external dependencies, no runtime overhead beyond the initial scan.
