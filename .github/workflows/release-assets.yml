@@ -111,7 +111,11 @@ jobs:
     needs: build-and-attach
     runs-on: ubuntu-latest
     continue-on-error: true
-    if: github.event_name == 'release'
+    # Runs on both `release: published` (normal flow) and `workflow_dispatch`
+    # (manual retries — e.g. after rotating a broken NPM_TOKEN). The
+    # downstream `npm publish` is idempotent: if the version already exists
+    # on the registry, npm rejects it with a loud error, so manual re-runs
+    # can't silently re-publish the same version.
     steps:
       - name: Resolve release tag
         id: tag
