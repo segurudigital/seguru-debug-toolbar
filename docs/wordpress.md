@@ -31,7 +31,7 @@ This is the right option when you're handing the toolbar to a client so they can
 The installable plugin includes a self-update checker. Every 6 hours (and on demand when an admin visits **Dashboard → Updates**) the plugin queries the GitHub releases API for newer tagged versions. When a newer release is found, WordPress shows a standard "Update available" notice on the Plugins screen — click **Update Now** and the new zip is pulled and installed, same flow as any wp.org plugin.
 
 - Only the installable plugin updates this way. The mu-plugin drop-in is intentionally not self-updating — replace it manually when you want to bump versions.
-- The checker fetches `https://api.github.com/repos/seguru-digital/seguru-debug-toolbar/releases/latest` and downloads the `seguru-debug-toolbar-wp-v<version>.zip` asset. Both requests go direct to GitHub and the CDN — no Seguru-hosted update service sits in the path.
+- The checker fetches `https://api.github.com/repos/segurudigital/seguru-debug-toolbar/releases/latest` and downloads the `seguru-debug-toolbar-wp-v<version>.zip` asset. Both requests go direct to GitHub and the CDN — no Seguru-hosted update service sits in the path.
 - Cache: release metadata is cached for 6 hours per site. A transient `sdt_github_release` holds the response. To force a recheck, delete that transient (`wp transient delete sdt_github_release`) or visit **Dashboard → Updates** and click **Check again**.
 - The plugin shows WordPress's standard "View details" modal with the GitHub release notes. The "Update Now" button runs the normal WP plugin upgrader, so rollback via your usual backup strategy still applies.
 

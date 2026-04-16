@@ -23,7 +23,8 @@ on:
         required: true
 
 permissions:
-  contents: write  # required to upload release assets via gh release upload
+  contents: write   # required to upload release assets via gh release upload
+  id-token: write   # required for npm publish --provenance (signed package attestation)
 
 jobs:
   build-and-attach:
@@ -96,3 +97,46 @@ jobs:
             "$ZIP_PATH" \
             "dist/seguru-debug-toolbar.min.js" \
             --clobber
+
+  # Publishes the package to npm on every release. Gated on NPM_TOKEN being
+  # present so forks and preview environments don't fail the workflow.
+  #
+  # continue-on-error: true for now — npm token issues shouldn't block the
+  # GitHub release. Remove once we've seen a clean publish in production.
+  publish-npm:
+    needs: build-and-attach
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    if: github.event_name == 'release'
+    steps:
+      - name: Resolve release tag
+        id: tag
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: echo "name=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout at release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tag.outputs.name }}
+
+      - name: Setup Node with npm registry auth
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "${NODE_AUTH_TOKEN}" ]; then
+            echo "::warning::NPM_TOKEN secret not set — skipping publish. Add it under Settings → Secrets and variables → Actions to enable npm releases."
+            exit 0
+          fi
+          # prepublishOnly in package.json will run `npm run build` before publish.
+          npm publish --provenance --access public

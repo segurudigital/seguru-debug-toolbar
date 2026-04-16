@@ -1,0 +1,29 @@
+### What ships to npm is controlled by package.json "files" (allowlist).
+### This file is a belt-and-braces safety net: if something ever gets added
+### to "files" by accident, these rules explicitly exclude it.
+
+# WordPress plugin bits — npm consumers should never see these
+wordpress/
+dist/seguru-debug-toolbar-wp-*.zip
+scripts/
+
+# Docs — only README, CHANGELOG, LICENSE ship (listed in "files")
+docs/
+AGENTS.md
+ROADMAP.md
+TASKS.md
+
+# Dev / test / CI
+test/
+.github/
+.claude/
+.vscode/
+.idea/
+*.log
+.DS_Store
+
+# Non-minified dev build (produced by `npm run dev`)
+dist/seguru-debug-toolbar.js
+
+# Assets used for the WP.org submission, not the npm package
+assets/

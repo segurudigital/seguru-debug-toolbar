@@ -1,19 +1,23 @@
 {
   "name": "seguru-debug-toolbar",
-  "version": "2.2.0",
-  "description": "Visual overlay for data-ref element labels. Three modes (Off, Icons, Full), keyboard shortcut, click-to-copy. Works in static HTML, Vite/Webpack builds, and WordPress.",
+  "version": "2.2.1",
+  "description": "Zero-dependency visual overlay for data-ref element labels. Three label modes, depth control, outline guides, click-to-copy. Default hidden — press H to reveal. Works in static HTML, Vite/Webpack builds, React/Next/Vue, WordPress, and Shopify.",
   "main": "dist/seguru-debug-toolbar.min.js",
   "module": "src/seguru-debug-toolbar.js",
+  "unpkg": "dist/seguru-debug-toolbar.min.js",
+  "jsdelivr": "dist/seguru-debug-toolbar.min.js",
   "files": [
-    "src/",
-    "dist/",
-    "wordpress/",
-    "assets/"
+    "src/seguru-debug-toolbar.js",
+    "dist/seguru-debug-toolbar.min.js",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "esbuild src/seguru-debug-toolbar.js --bundle --minify --outfile=dist/seguru-debug-toolbar.min.js --format=iife",
     "build:wp": "bash scripts/build-wp-zip.sh",
-    "dev": "esbuild src/seguru-debug-toolbar.js --bundle --outfile=dist/seguru-debug-toolbar.js --format=iife --watch"
+    "dev": "esbuild src/seguru-debug-toolbar.js --bundle --outfile=dist/seguru-debug-toolbar.js --format=iife --watch",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "debug",
@@ -22,13 +26,24 @@
     "wireframe",
     "overlay",
     "qa",
-    "wordpress"
+    "wordpress",
+    "design-system",
+    "elementor",
+    "bricks",
+    "shopify"
   ],
   "author": "Seguru Digital <hello@seguru.digital>",
   "license": "MIT",
+  "homepage": "https://github.com/segurudigital/seguru-debug-toolbar#readme",
+  "bugs": {
+    "url": "https://github.com/segurudigital/seguru-debug-toolbar/issues"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/seguru-digital/seguru-debug-toolbar.git"
+    "url": "git+https://github.com/segurudigital/seguru-debug-toolbar.git"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "devDependencies": {
     "esbuild": "^0.20.2"

@@ -23,7 +23,7 @@ You are rolling out the Seguru Debug Toolbar into the current project. Follow th
 
 ## What the toolbar is
 
-A ~42 KB zero-dependency script that visualizes `data-ref` attributes on any HTML element. Used for wireframe QA, design review, client revision rounds, bug reporting, and AI-assisted feedback loops. Source + docs: https://github.com/seguru-digital/seguru-debug-toolbar
+A ~42 KB zero-dependency script that visualizes `data-ref` attributes on any HTML element. Used for wireframe QA, design review, client revision rounds, bug reporting, and AI-assisted feedback loops. Source + docs: https://github.com/segurudigital/seguru-debug-toolbar
 
 ## Non-negotiables
 
@@ -107,10 +107,10 @@ Use jsDelivr — it serves any GitHub release unchanged, no download step, updat
 
 ```html
 <!-- Track the 2.x line (auto-updates on minor/patch releases) -->
-<script src="https://cdn.jsdelivr.net/gh/seguru-digital/seguru-debug-toolbar@v2/dist/seguru-debug-toolbar.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/gh/segurudigital/seguru-debug-toolbar@v2/dist/seguru-debug-toolbar.min.js" defer></script>
 
 <!-- Pin to an exact version for client production sites -->
-<script src="https://cdn.jsdelivr.net/gh/seguru-digital/seguru-debug-toolbar@v2.2.0/dist/seguru-debug-toolbar.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/gh/segurudigital/seguru-debug-toolbar@v2.2.1/dist/seguru-debug-toolbar.min.js" defer></script>
 ```
 
 Default: pin by major version (`@v2`). Use exact tag for production where a manual upgrade step is required. Only use `@latest` in internal wireframes or staging where a breaking-change risk is acceptable.

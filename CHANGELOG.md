@@ -10,12 +10,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ---
 
+## [2.2.1] — 2026-04-16
+
+### Fixed
+
+- **Canonical GitHub org slug** — every reference to `seguru-digital/seguru-debug-toolbar` (with hyphen) corrected to `segurudigital/seguru-debug-toolbar` (no hyphen — the real GitHub account). The 2.2.0 release shipped with the wrong slug baked into the WordPress self-update hook (`SDT_GITHUB_REPO`) and all jsDelivr install snippets, meaning self-update calls 404-ed silently and CDN URLs didn't resolve. Install 2.2.1 manually on any site running 2.2.0 — subsequent releases self-update correctly.
+- **Portable `sed` in the WP zip build script** — `sed -i ''` is BSD-only and fails on GitHub Actions ubuntu runners. Replaced with `perl -i -pe` which behaves the same on macOS and Linux. (Landed post-2.2.0 but documenting here for completeness.)
+
+### Added
+
+- **npm publish automation** — `release-assets.yml` now has a `publish-npm` job that publishes the package to npmjs.org after the GitHub release assets upload. Uses `--provenance` for signed package attestation. Gated on `NPM_TOKEN` repo secret. Runs `continue-on-error: true` initially so a misconfigured token doesn't block the GitHub release. See AGENTS.md "npm publish setup" for the one-time token generation steps.
+- **npm package metadata** — `package.json` now includes `homepage`, `bugs`, `publishConfig`, and `unpkg`/`jsdelivr` entry points. `.npmignore` prevents WordPress bits, docs, and build tooling from shipping to npm consumers. The tarball is 6 files, ~35 KB.
+
+---
+
 ## [2.2.0] — 2026-04-16
 
 ### Added
 
 - **GitHub-based self-update for the WordPress plugin** — the installable plugin now queries the GitHub releases API every 6 hours and surfaces a standard "Update available" notice on the Plugins and Dashboard → Updates screens. One click installs the new zip via the normal WP upgrader. No separate update server or subscription required. Response cached in the `sdt_github_release` transient; clear it to force a recheck.
-- **jsDelivr install path** — documented CDN install via `cdn.jsdelivr.net/gh/seguru-digital/seguru-debug-toolbar@<tag>` with pinning guidance (`@v2` for auto-minor, `@vX.Y.Z` for production, `@latest` for wireframes only).
+- **jsDelivr install path** — documented CDN install via `cdn.jsdelivr.net/gh/segurudigital/seguru-debug-toolbar@<tag>` with pinning guidance (`@v2` for auto-minor, `@vX.Y.Z` for production, `@latest` for wireframes only).
 - **AI-agent rollout prompt** — `docs/agent-rollout-prompt.md` — pasteable, self-contained prompt for Claude Code, ChatGPT, Codex, Cursor, and any other LLM-based agent. Instructs the agent to install the toolbar, apply the Seguru naming convention for `data-ref`, and keep refs stable from wireframe through to production.
 - **`startHidden` config key** — `window.seguruDebugConfig.startHidden` (default `true`) controls whether the toolbar loads visible or hidden. Override to `false` to restore pre-2.2.0 behaviour per-page.
 - **WordPress admin toggle: "Start hidden"** — new checkbox under Display (default on) maps to `sdt_start_hidden` option and feeds through to the JS as `startHidden`.

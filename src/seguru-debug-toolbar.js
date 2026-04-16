@@ -1,6 +1,6 @@
 /**
  * Seguru Debug Toolbar — Element Reference Labels
- * https://github.com/seguru-digital/seguru-debug-toolbar
+ * https://github.com/segurudigital/seguru-debug-toolbar
  *
  * Visual overlay for `data-ref` element labels on wireframes,
  * dev builds, and live WordPress pages.

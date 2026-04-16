@@ -81,13 +81,13 @@ Load directly from jsDelivr, which serves any GitHub release unchanged. No build
 
 ```html
 <!-- Track the 2.x line — receives minor + patch updates automatically -->
-<script src="https://cdn.jsdelivr.net/gh/seguru-digital/seguru-debug-toolbar@v2/dist/seguru-debug-toolbar.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/gh/segurudigital/seguru-debug-toolbar@v2/dist/seguru-debug-toolbar.min.js" defer></script>
 
 <!-- Or pin to an exact version (recommended for production) -->
-<script src="https://cdn.jsdelivr.net/gh/seguru-digital/seguru-debug-toolbar@v2.2.0/dist/seguru-debug-toolbar.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/gh/segurudigital/seguru-debug-toolbar@v2.2.1/dist/seguru-debug-toolbar.min.js" defer></script>
 
 <!-- Or always the latest release (use in wireframes / staging only) -->
-<script src="https://cdn.jsdelivr.net/gh/seguru-digital/seguru-debug-toolbar@latest/dist/seguru-debug-toolbar.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/gh/segurudigital/seguru-debug-toolbar@latest/dist/seguru-debug-toolbar.min.js" defer></script>
 ```
 
 Pinning by major (`@v2`) is the sweet spot — stay current on bug fixes, avoid breaking changes. Pin to an exact tag for client production sites where you want a manual upgrade step.
@@ -170,7 +170,7 @@ The toolbar only loads for administrators, so regular site visitors never see it
 ## Build from source
 
 ```bash
-git clone https://github.com/seguru-digital/seguru-debug-toolbar.git
+git clone https://github.com/segurudigital/seguru-debug-toolbar.git
 cd seguru-debug-toolbar
 npm install                  # installs esbuild (dev dependency only)
 npm run build                # → dist/seguru-debug-toolbar.min.js

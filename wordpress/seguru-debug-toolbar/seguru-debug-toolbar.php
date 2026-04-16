@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name:  Seguru Debug Toolbar
- * Plugin URI:   https://github.com/seguru-digital/seguru-debug-toolbar
+ * Plugin URI:   https://github.com/segurudigital/seguru-debug-toolbar
  * Description:  Visual overlay for data-ref element labels. Shows section references on the front end for admins — useful for QA, revision feedback, and bug reporting.
- * Version:      2.2.0
+ * Version:      2.2.1
  * Author:       Seguru Digital
  * Author URI:   https://seguru.digital
  * License:      MIT
@@ -19,7 +19,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 // ── Constants ─────────────────────────────────────────────────
-define( 'SDT_VERSION', '2.2.0' );
+define( 'SDT_VERSION', '2.2.1' );
 define( 'SDT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SDT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SDT_OPTION_GROUP', 'sdt_settings' );
@@ -145,7 +145,7 @@ add_action( 'admin_notices', function () {
 //
 // Release zip asset name must match /seguru-debug-toolbar-wp-v[\d.]+\.zip/
 // (the output of scripts/build-wp-zip.sh).
-define( 'SDT_GITHUB_REPO', 'seguru-digital/seguru-debug-toolbar' );
+define( 'SDT_GITHUB_REPO', 'segurudigital/seguru-debug-toolbar' );
 define( 'SDT_UPDATE_CACHE_KEY', 'sdt_github_release' );
 define( 'SDT_UPDATE_CACHE_TTL', 6 * HOUR_IN_SECONDS );
 

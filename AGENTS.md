@@ -1,7 +1,7 @@
 # Seguru Debug Toolbar — Agent Context
 
 **Version:** 2.0.0 (pre-release)
-**Repo:** https://github.com/seguru-digital/seguru-debug-toolbar
+**Repo:** https://github.com/segurudigital/seguru-debug-toolbar
 **Maintained by:** Seguru Digital (hello@seguru.digital)
 **License:** MIT
 
@@ -103,6 +103,24 @@ gh workflow run release-assets.yml -f tag=v2.2.0
 ```
 
 The self-update hook in existing WordPress installs won't see the new version until the `sdt_github_release` transient expires (6 hours) or is cleared manually.
+
+### npm publish setup (one-time)
+
+The `publish-npm` job in `release-assets.yml` publishes `seguru-debug-toolbar` to npmjs.org on every release. It's gated on an `NPM_TOKEN` repo secret — if the secret isn't set, the job logs a warning and exits 0 (so missing setup doesn't block GitHub releases).
+
+To enable publishing:
+
+1. On npmjs.org, create an **Automation** token with **Publish** scope for the `seguru-debug-toolbar` package. Profile → Access Tokens → Generate New Token → Granular Access Token, select the package, choose "Automation".
+2. In this repo: **Settings → Secrets and variables → Actions → New repository secret**. Name it `NPM_TOKEN`, paste the token value, save.
+3. Cut the next release. The `publish-npm` job will run `npm publish --provenance --access public` after the GitHub release assets upload succeeds.
+
+The job runs `continue-on-error: true` initially so a misconfigured token doesn't fail the release. Once you've seen a successful publish, remove that flag in the workflow so future token breakages fail loudly.
+
+Canonical npm install command after publish:
+
+```bash
+npm install --save-dev seguru-debug-toolbar
+```
 
 ---
 

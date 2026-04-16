@@ -118,6 +118,11 @@ No. The entire plugin is a single ~42 KB minified JavaScript file that only load
 
 == Changelog ==
 
+= 2.2.1 =
+* Fixed: WordPress self-update and jsDelivr URLs pointed at the wrong GitHub org slug (hyphen vs no-hyphen). Install 2.2.1 manually to replace a 2.2.0 install — self-update works correctly from 2.2.1 onward.
+* Fixed: WordPress zip build on Linux CI (portable sed).
+* Added: npm publish automation on release (ships `seguru-debug-toolbar` to npm).
+
 = 2.2.0 =
 * New default behaviour: toolbar loads hidden — press H to reveal. Keeps screenshots, Chrome debug captures, and client demos clean.
 * New defaults: Labels = Full, Depth = Elements (densest auto-ref scan by default)

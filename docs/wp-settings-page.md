@@ -143,7 +143,7 @@ A read-only card with usage instructions. Not a form — just static HTML styled
 >
 > **What are data-ref labels?** Every tagged section on your site has a `data-ref` attribute — a short code like `home-01-hero` that identifies that section. The toolbar makes these codes visible so you can reference them in bug reports, revision notes, or feedback.
 >
-> **Documentation:** [View full docs on GitHub →](https://github.com/seguru-digital/seguru-debug-toolbar)
+> **Documentation:** [View full docs on GitHub →](https://github.com/segurudigital/seguru-debug-toolbar)
 
 ---
 
