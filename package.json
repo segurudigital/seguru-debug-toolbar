@@ -1,6 +1,6 @@
 {
   "name": "@segurudigital/seguru-debug-toolbar",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "Zero-dependency visual overlay for data-ref element labels. Three label modes, depth control, outline guides, click-to-copy. Default hidden — press H to reveal. Works in static HTML, Vite/Webpack builds, React/Next/Vue, WordPress, and Shopify.",
   "main": "dist/seguru-debug-toolbar.min.js",
   "module": "src/seguru-debug-toolbar.js",

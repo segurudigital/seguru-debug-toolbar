@@ -118,6 +118,12 @@ No. The entire plugin is a single ~42 KB minified JavaScript file that only load
 
 == Changelog ==
 
+= 2.2.2 =
+* Changed: npm package renamed to `@segurudigital/seguru-debug-toolbar` (scoped to the segurudigital org). The canonical install command is now `npm install @segurudigital/seguru-debug-toolbar`.
+* Changed: mu-plugin drop-in auto-detects the JS file at the scoped `node_modules/@segurudigital/...` path, falling back to the unscoped path for local installs that predate the rename.
+* Fixed: release workflow now picks the current version's WP zip correctly instead of an alphabetically-earlier historical zip.
+* Added: first live npm publish on release (gated on NPM_TOKEN repo secret, signed with provenance).
+
 = 2.2.1 =
 * Fixed: WordPress self-update and jsDelivr URLs pointed at the wrong GitHub org slug (hyphen vs no-hyphen). Install 2.2.1 manually to replace a 2.2.0 install — self-update works correctly from 2.2.1 onward.
 * Fixed: WordPress zip build on Linux CI (portable sed).

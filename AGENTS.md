@@ -104,49 +104,20 @@ gh workflow run release-assets.yml -f tag=v2.2.0
 
 The self-update hook in existing WordPress installs won't see the new version until the `sdt_github_release` transient expires (6 hours) or is cleared manually.
 
-### npm publish setup (one-time)
+### npm publishing
 
-The `publish-npm` job in `release-assets.yml` publishes `seguru-debug-toolbar` to npmjs.org on every release. It's gated on an `NPM_TOKEN` repo secret — if the secret isn't set, the job logs a warning and exits 0 (so missing setup doesn't block GitHub releases).
+The `publish-npm` job in `release-assets.yml` ships `@segurudigital/seguru-debug-toolbar` to npmjs.org with `--provenance` signing on every release. Authenticated via the `NPM_TOKEN` repo secret (already set). The package is scoped to the `segurudigital` npm org; `publishConfig.access: "public"` in `package.json` overrides the scoped-default-private behaviour.
 
-**Important constraint before you start:** a granular npm token can only be scoped to *existing* packages, so the first publish for a brand-new name has to come from a broader-scoped token (or be done manually from your laptop). Pick Option A or B below.
-
-#### Option A — Classic Automation token (fastest, recommended to start)
-
-1. Log in at <https://www.npmjs.com> → click your avatar (top-right) → **Access Tokens**.
-2. **Generate New Token → Classic Token**.
-3. Type: **Automation**. This is designed for CI — it bypasses 2FA and has publish capability on any package owned by the account.
-4. Copy the token string (`npm_…`) — it's shown once; if you close the page, regenerate.
-5. In this GitHub repo: **Settings → Secrets and variables → Actions → New repository secret**. Name: `NPM_TOKEN`. Value: the token. Save.
-6. Cut the next release — `publish-npm` will run `npm publish --provenance --access public` after the GitHub asset upload.
-
-#### Option B — Granular Access Token (tighter scope, two-step)
-
-1. First publish manually from your laptop to establish the package on the registry:
-   ```bash
-   npm login
-   npm publish --access public
-   ```
-   (Run from the repo root; `prepublishOnly` builds automatically.)
-2. Now that `seguru-debug-toolbar` exists on npm, go to **Access Tokens → Generate New Token → Granular Access Token**.
-3. Set an expiry (1 year is a reasonable default — calendar a renewal).
-4. Under **Packages and scopes**: choose **Only select packages**, pick `seguru-debug-toolbar`, grant **Read and write**.
-5. Save → copy the token.
-6. Add it as the `NPM_TOKEN` GitHub secret (same as Option A step 5).
-7. All subsequent releases publish via CI.
-
-Option A and Option B plug into the workflow identically — same secret name, same workflow. Start with A; move to B later with no workflow change.
-
-#### After first successful publish
-
-The `publish-npm` job runs `continue-on-error: true` initially so a token problem can't block the GitHub release. Once you've seen one successful publish, remove that flag in `.github/workflows/release-assets.yml` so future token expiry fails loudly.
-
-Canonical install command after publish:
+Canonical install:
 
 ```bash
 npm install --save-dev @segurudigital/seguru-debug-toolbar
 ```
 
-The package is scoped to the `segurudigital` npm org. `--access public` is set in `package.json` → `publishConfig`, so scoped-package default-private behaviour is overridden at publish time.
+Operational notes for future maintenance:
+
+- If `NPM_TOKEN` ever expires, regenerate from npmjs.com → Access Tokens and replace the value in **GitHub repo Settings → Secrets and variables → Actions**. Same secret name, no workflow changes needed.
+- The `publish-npm` job currently has `continue-on-error: true` so token expiry can't block a GitHub release. Once the flow is stable (seen a few green publishes), remove that flag so token issues fail loudly instead of silently skipping npm.
 
 ---
 

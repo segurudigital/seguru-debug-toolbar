@@ -84,7 +84,7 @@ Load directly from jsDelivr, which serves any GitHub release unchanged. No build
 <script src="https://cdn.jsdelivr.net/gh/segurudigital/seguru-debug-toolbar@v2/dist/seguru-debug-toolbar.min.js" defer></script>
 
 <!-- Or pin to an exact version (recommended for production) -->
-<script src="https://cdn.jsdelivr.net/gh/segurudigital/seguru-debug-toolbar@v2.2.1/dist/seguru-debug-toolbar.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/gh/segurudigital/seguru-debug-toolbar@v2.2.2/dist/seguru-debug-toolbar.min.js" defer></script>
 
 <!-- Or always the latest release (use in wireframes / staging only) -->
 <script src="https://cdn.jsdelivr.net/gh/segurudigital/seguru-debug-toolbar@latest/dist/seguru-debug-toolbar.min.js" defer></script>

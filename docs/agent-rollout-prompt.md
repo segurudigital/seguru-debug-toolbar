@@ -110,7 +110,7 @@ Use jsDelivr — it serves any GitHub release unchanged, no download step, updat
 <script src="https://cdn.jsdelivr.net/gh/segurudigital/seguru-debug-toolbar@v2/dist/seguru-debug-toolbar.min.js" defer></script>
 
 <!-- Pin to an exact version for client production sites -->
-<script src="https://cdn.jsdelivr.net/gh/segurudigital/seguru-debug-toolbar@v2.2.1/dist/seguru-debug-toolbar.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/gh/segurudigital/seguru-debug-toolbar@v2.2.2/dist/seguru-debug-toolbar.min.js" defer></script>
 ```
 
 Default: pin by major version (`@v2`). Use exact tag for production where a manual upgrade step is required. Only use `@latest` in internal wireframes or staging where a breaking-change risk is acceptable.

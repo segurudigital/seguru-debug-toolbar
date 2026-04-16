@@ -10,6 +10,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ---
 
+## [2.2.2] — 2026-04-16
+
+### Changed
+
+- **npm package renamed to `@segurudigital/seguru-debug-toolbar`** — scoped to the `segurudigital` npm org. Install: `npm install @segurudigital/seguru-debug-toolbar`. Previously the unscoped `seguru-debug-toolbar` name was planned but never published. The scoped name signals org ownership, guarantees the namespace is available, and is the canonical install going forward.
+- **WordPress mu-plugin drop-in** — `node_modules/` auto-detect now checks the scoped path (`@segurudigital/seguru-debug-toolbar/dist/...`) first, falling back to the unscoped path for compatibility with any local installs that predate the rename.
+- **ROADMAP** — npm + CDN checklist updated: GitHub-direct jsDelivr is live, npm publish automation is wired via the release workflow, and the npm-backed jsDelivr URL is flagged for a README swap after first successful publish.
+
+### Fixed
+
+- **Release workflow zip selection** — `release-assets.yml` now derives the WordPress zip path directly from `package.json` instead of globbing `dist/` and picking alphabetically, which was attaching stale historical zips (e.g. `v1.3.0`) to new releases.
+- **Portable `sed` in the WP zip build script** — BSD-vs-GNU `sed -i` divergence fixed by switching to `perl -i -pe`. Enables the GitHub Actions Linux runner to build the WP zip.
+
+### Added
+
+- **First live npm publish** — the `publish-npm` job in the release workflow ships `@segurudigital/seguru-debug-toolbar` to npmjs.org with `--provenance` signing on every release. Gated on the `NPM_TOKEN` repo secret.
+
+---
+
 ## [2.2.1] — 2026-04-16
 
 ### Fixed
