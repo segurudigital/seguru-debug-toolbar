@@ -75,47 +75,59 @@ We use it for wireframe QA, copy review, client revision rounds, and debugging b
 
 ## Install
 
-**CDN (recommended — zero install, auto-updates):**
+Current version: **v2.2.2** — see [CHANGELOG.md](CHANGELOG.md) for release notes.
 
-Load directly from jsDelivr, which serves any GitHub release unchanged. No build, no download, no npm dependency:
+**npm (React, Next, Vue, Svelte, any bundled app):**
+
+```bash
+npm install --save-dev @segurudigital/seguru-debug-toolbar
+```
+
+Then include it in your app shell — gated to non-production so end users never see the toolbar:
+
+```jsx
+// app/layout.tsx — Next.js example
+import Script from 'next/script';
+
+{process.env.NODE_ENV !== 'production' && (
+  <Script src="/seguru-debug-toolbar.min.js" strategy="afterInteractive" />
+)}
+```
+
+Or import the source directly if you want to bundle it: `import '@segurudigital/seguru-debug-toolbar/src/seguru-debug-toolbar.js'`.
+
+**CDN (static HTML, wireframes, WordPress themes, Shopify themes):**
+
+Load directly from jsDelivr — mirrors the npm package automatically, no download step:
 
 ```html
 <!-- Track the 2.x line — receives minor + patch updates automatically -->
-<script src="https://cdn.jsdelivr.net/gh/segurudigital/seguru-debug-toolbar@v2/dist/seguru-debug-toolbar.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@segurudigital/seguru-debug-toolbar@2/dist/seguru-debug-toolbar.min.js" defer></script>
 
 <!-- Or pin to an exact version (recommended for production) -->
-<script src="https://cdn.jsdelivr.net/gh/segurudigital/seguru-debug-toolbar@v2.2.2/dist/seguru-debug-toolbar.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@segurudigital/seguru-debug-toolbar@2.2.2/dist/seguru-debug-toolbar.min.js" defer></script>
 
 <!-- Or always the latest release (use in wireframes / staging only) -->
-<script src="https://cdn.jsdelivr.net/gh/segurudigital/seguru-debug-toolbar@latest/dist/seguru-debug-toolbar.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@segurudigital/seguru-debug-toolbar/dist/seguru-debug-toolbar.min.js" defer></script>
 ```
 
-Pinning by major (`@v2`) is the sweet spot — stay current on bug fixes, avoid breaking changes. Pin to an exact tag for client production sites where you want a manual upgrade step.
+Pinning by major (`@2`) is the sweet spot — stay current on bug fixes, avoid breaking changes. Pin to an exact version for client production sites where you want a manual upgrade step.
 
-**Manual (any project):**
+**Manual download:**
 
-Download `dist/seguru-debug-toolbar.min.js` from this repo and drop it in your project. Include it with a script tag:
+Grab `seguru-debug-toolbar.min.js` from the [latest release](https://github.com/segurudigital/seguru-debug-toolbar/releases/latest) and drop it in your project:
 
 ```html
-<script src="path/to/seguru-debug-toolbar.min.js"></script>
+<script src="path/to/seguru-debug-toolbar.min.js" defer></script>
 ```
 
 The toolbar auto-injects itself. No CSS file, no init call needed.
 
 **WordPress:**
 
-Build the installable plugin zip:
+Download `seguru-debug-toolbar-wp-vX.Y.Z.zip` from the [latest release](https://github.com/segurudigital/seguru-debug-toolbar/releases/latest). Upload via **wp-admin → Plugins → Add New → Upload**, activate, configure under **Settings → Debug Toolbar**. An mu-plugin drop-in is also included in [wordpress/seguru-debug-toolbar.php](wordpress/seguru-debug-toolbar.php).
 
-```bash
-npm run build:wp
-# → dist/seguru-debug-toolbar-wp-vX.Y.Z.zip
-```
-
-Upload via wp-admin → Plugins → Add New → Upload, activate, configure under Settings → Debug Toolbar. An mu-plugin drop-in is also included in `wordpress/seguru-debug-toolbar.php`.
-
-The installable plugin checks the GitHub releases API every 6 hours. When a newer version is tagged, WordPress shows a standard "Update available" notice on the Plugins screen — click **Update Now** and the new zip is pulled and installed like any wp.org plugin. No separate update service or subscription needed.
-
-> **npm is coming.** The package will be published to npm once v2.2.0 is tagged. Until then, CDN or manual install. See [Roadmap](ROADMAP.md) for status.
+The installable plugin self-updates from GitHub releases — every 6 hours it checks for newer versions and surfaces a standard "Update available" notice on the Plugins screen. One click installs the new zip via the native WP upgrader. No separate update service or subscription needed.
 
 ---
 
