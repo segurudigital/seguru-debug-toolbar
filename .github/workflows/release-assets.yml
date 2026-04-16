@@ -78,9 +78,13 @@ jobs:
       - name: Locate built zip
         id: zip
         run: |
-          zip_path=$(ls dist/seguru-debug-toolbar-wp-v*.zip 2>/dev/null | head -n1)
-          if [ -z "$zip_path" ]; then
-            echo "::error::Expected dist/seguru-debug-toolbar-wp-v<version>.zip, found nothing."
+          # Derive the expected zip path from package.json directly — do NOT
+          # glob dist/ because historical zips for prior versions are
+          # committed there and an alphabetical ls would pick v1.3.0 first.
+          version=$(node -p "require('./package.json').version")
+          zip_path="dist/seguru-debug-toolbar-wp-v${version}.zip"
+          if [ ! -f "$zip_path" ]; then
+            echo "::error::Expected $zip_path, build:wp did not produce it."
             ls -la dist/
             exit 1
           fi
