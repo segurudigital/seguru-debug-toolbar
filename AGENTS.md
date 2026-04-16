@@ -1,6 +1,6 @@
 # Seguru Debug Toolbar — Agent Context
 
-**Version:** 2.0.0 (pre-release)
+**Version:** 2.2.3
 **Repo:** https://github.com/segurudigital/seguru-debug-toolbar
 **Maintained by:** Seguru Digital (hello@seguru.digital)
 **License:** MIT
@@ -22,7 +22,7 @@ Single JS file in `src/`. No framework. Plain ES5-compatible IIFE.
 | Source | Plain JavaScript (ES5 IIFE) |
 | Build | esbuild — `npm run build` → `dist/seguru-debug-toolbar.min.js` |
 | WordPress plugin | PHP 8.1+, WordPress 5.8+ |
-| Package | npm (`seguru-debug-toolbar`) |
+| Package | npm (`@segurudigital/seguru-debug-toolbar`) |
 | Test page | `test/demo.html` (open directly in browser, no server needed) |
 
 ---

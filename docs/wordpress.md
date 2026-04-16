@@ -12,13 +12,13 @@ The easiest path. Build the zip, hand it to the client, done.
 
 ```bash
 npm run build:wp
-# → dist/seguru-debug-toolbar-wp.zip
+# → dist/seguru-debug-toolbar-wp-vX.Y.Z.zip
 ```
 
 **Install:**
 
 1. Go to **wp-admin → Plugins → Add New → Upload Plugin**
-2. Upload `seguru-debug-toolbar-wp.zip`
+2. Upload `seguru-debug-toolbar-wp-vX.Y.Z.zip`
 3. Click **Activate**
 4. Go to **Settings → Debug Toolbar** and enable the toolbar
 

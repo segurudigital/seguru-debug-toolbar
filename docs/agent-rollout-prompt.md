@@ -103,17 +103,17 @@ Pick the path that matches the target project:
 
 ### Static HTML / wireframes / any HTML file (recommended: CDN)
 
-Use jsDelivr — it serves any GitHub release unchanged, no download step, updates by changing the version pin:
+Use jsDelivr's npm-backed path — no download step, updates by changing the version pin:
 
 ```html
 <!-- Track the 2.x line (auto-updates on minor/patch releases) -->
-<script src="https://cdn.jsdelivr.net/gh/segurudigital/seguru-debug-toolbar@v2/dist/seguru-debug-toolbar.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@segurudigital/seguru-debug-toolbar@2/dist/seguru-debug-toolbar.min.js" defer></script>
 
 <!-- Pin to an exact version for client production sites -->
-<script src="https://cdn.jsdelivr.net/gh/segurudigital/seguru-debug-toolbar@v2.2.2/dist/seguru-debug-toolbar.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@segurudigital/seguru-debug-toolbar@2.2.3/dist/seguru-debug-toolbar.min.js" defer></script>
 ```
 
-Default: pin by major version (`@v2`). Use exact tag for production where a manual upgrade step is required. Only use `@latest` in internal wireframes or staging where a breaking-change risk is acceptable.
+Default: pin by major version (`@2`). Use the exact version for production where a manual upgrade step is required. Only use the unpinned path in internal wireframes or staging where a breaking-change risk is acceptable.
 
 Alternatively, download `dist/seguru-debug-toolbar.min.js` from a GitHub release and drop it next to your HTML:
 
@@ -123,19 +123,35 @@ Alternatively, download `dist/seguru-debug-toolbar.min.js` from a GitHub release
 
 ### React / Next / Vue / Svelte
 
-Load via jsDelivr from your layout/head, or drop the minified file into `public/`:
+Install from npm first:
+
+```bash
+npm install --save-dev @segurudigital/seguru-debug-toolbar
+```
+
+Then bundle the source in a dev-only client entrypoint, or copy `node_modules/@segurudigital/seguru-debug-toolbar/dist/seguru-debug-toolbar.min.js` into `public/` before using a `/seguru-debug-toolbar.min.js` script tag:
 
 ```jsx
-// app/layout.tsx — Next.js
-import Script from 'next/script';
-<Script src="/seguru-debug-toolbar.min.js" strategy="afterInteractive" />
+'use client';
+
+import { useEffect } from 'react';
+
+export function DebugToolbar() {
+  useEffect(function () {
+    if (process.env.NODE_ENV !== 'production') {
+      import('@segurudigital/seguru-debug-toolbar/src/seguru-debug-toolbar.js');
+    }
+  }, []);
+
+  return null;
+}
 ```
 
 Make sure it only loads in dev / preview / staging, never production-public. Example gate:
 
 ```jsx
 {process.env.NODE_ENV !== 'production' && (
-  <Script src="/seguru-debug-toolbar.min.js" strategy="afterInteractive" />
+  <DebugToolbar />
 )}
 ```
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds a ready-to-install WordPress plugin .zip
-# Output: dist/seguru-debug-toolbar-wp.zip
+# Output: dist/seguru-debug-toolbar-wp-vX.Y.Z.zip
 
 set -euo pipefail
 
@@ -117,6 +117,12 @@ No. The entire plugin is a single ~42 KB minified JavaScript file that only load
 5. Dark-background page with adaptive label contrast
 
 == Changelog ==
+
+= 2.2.3 =
+* Fixed: manual `workflow_dispatch` retries now resolve the requested tag in the npm publish job, so re-running `release-assets.yml` checks out the correct ref before publish.
+* Fixed: README npm install docs no longer point bundled-app users at a nonexistent `/seguru-debug-toolbar.min.js` path right after `npm install`.
+* Fixed: WordPress setup docs now reference the real `seguru-debug-toolbar-wp-vX.Y.Z.zip` build artifact.
+* Changed: AI-agent rollout prompt now includes the scoped npm install path, the canonical npm-backed jsDelivr URL, and the corrected React/Next bundled-app example.
 
 = 2.2.2 =
 * Changed: npm package renamed to `@segurudigital/seguru-debug-toolbar` (scoped to the segurudigital org). The canonical install command is now `npm install @segurudigital/seguru-debug-toolbar`.

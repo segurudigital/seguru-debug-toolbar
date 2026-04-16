@@ -75,7 +75,7 @@ We use it for wireframe QA, copy review, client revision rounds, and debugging b
 
 ## Install
 
-Current version: **v2.2.2** — see [CHANGELOG.md](CHANGELOG.md) for release notes.
+Current version: **v2.2.3** — see [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 **npm (React, Next, Vue, Svelte, any bundled app):**
 
@@ -83,18 +83,25 @@ Current version: **v2.2.2** — see [CHANGELOG.md](CHANGELOG.md) for release not
 npm install --save-dev @segurudigital/seguru-debug-toolbar
 ```
 
-Then include it in your app shell — gated to non-production so end users never see the toolbar:
+Then either bundle the source in a dev-only client entrypoint, or copy `dist/seguru-debug-toolbar.min.js` into `public/` and load that file explicitly. Bundling is the simplest path in React/Next/Vue apps:
 
 ```jsx
-// app/layout.tsx — Next.js example
-import Script from 'next/script';
+'use client';
 
-{process.env.NODE_ENV !== 'production' && (
-  <Script src="/seguru-debug-toolbar.min.js" strategy="afterInteractive" />
-)}
+import { useEffect } from 'react';
+
+export function DebugToolbar() {
+  useEffect(function () {
+    if (process.env.NODE_ENV !== 'production') {
+      import('@segurudigital/seguru-debug-toolbar/src/seguru-debug-toolbar.js');
+    }
+  }, []);
+
+  return null;
+}
 ```
 
-Or import the source directly if you want to bundle it: `import '@segurudigital/seguru-debug-toolbar/src/seguru-debug-toolbar.js'`.
+Render `<DebugToolbar />` once in your app shell or layout. If you prefer a script tag instead, first copy `node_modules/@segurudigital/seguru-debug-toolbar/dist/seguru-debug-toolbar.min.js` into your public web root, then load `/seguru-debug-toolbar.min.js`.
 
 **CDN (static HTML, wireframes, WordPress themes, Shopify themes):**
 
@@ -105,7 +112,7 @@ Load directly from jsDelivr — mirrors the npm package automatically, no downlo
 <script src="https://cdn.jsdelivr.net/npm/@segurudigital/seguru-debug-toolbar@2/dist/seguru-debug-toolbar.min.js" defer></script>
 
 <!-- Or pin to an exact version (recommended for production) -->
-<script src="https://cdn.jsdelivr.net/npm/@segurudigital/seguru-debug-toolbar@2.2.2/dist/seguru-debug-toolbar.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@segurudigital/seguru-debug-toolbar@2.2.3/dist/seguru-debug-toolbar.min.js" defer></script>
 
 <!-- Or always the latest release (use in wireframes / staging only) -->
 <script src="https://cdn.jsdelivr.net/npm/@segurudigital/seguru-debug-toolbar/dist/seguru-debug-toolbar.min.js" defer></script>

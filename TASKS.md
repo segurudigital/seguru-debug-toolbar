@@ -1,13 +1,13 @@
 # Tasks
 
 **Project:** Seguru Debug Toolbar
-**Version target:** 2.1.0
+**Version target:** 2.2.3
 
 ---
 
 ## Handoff notes
 
-**Last session:** 2026-04-11 (ten sessions)
+**Last session:** 2026-04-16 (eleven sessions)
 
 **What was done (session 1):**
 - Implemented all v2 features: H key presentation mode, tooltip hover fix, Full mode contrast, adaptive bg luminance labels, Tree panel
@@ -78,17 +78,25 @@
 - Rebuilt the JS bundle and WordPress zip for the `2.1.0` release snapshot
 - Committed and pushed the release update to `main`
 
+**What was done (session 11):**
+- Ran a post-release QA pass against the `2.2.2` repo state: syntax/build checks, WP zip build inspection, npm pack dry-run, and a release-flow/docs audit
+- Fixed `release-assets.yml` so manual `workflow_dispatch` retries resolve the requested tag in the `publish-npm` job as well as the asset-upload job
+- Corrected the npm install docs in `README.md` and `docs/agent-rollout-prompt.md` so bundled-app consumers no longer get sent to a nonexistent `/seguru-debug-toolbar.min.js` path without a copy step
+- Corrected `docs/wordpress.md` to reference the real versioned WP zip filename produced by `npm run build:wp`
+- Synced agent-context docs (`AGENTS.md`, this file) to the current 2.2.x release line and scoped npm package name
+- Bumped the project version to `2.2.3`, updated release notes, rebuilt the JS bundle and WP zip, and prepared the patch for commit/push
+
 **Where things were left:**
-- `main` now includes the pushed `2.1.0` release snapshot for the UI refresh work
-- Scripted demo QA is complete and passed; manual browser QA on a real builder page is still pending
-- Source, dist, package metadata, and WordPress files are aligned on `2.1.0`
-- WordPress package build succeeds and outputs `dist/seguru-debug-toolbar-wp-v2.1.0.zip`
-- No git tag has been created for `v2.0.0` or `v2.1.0` yet
+- `main` has the `2.2.2` distribution work plus the queued `2.2.3` patch for release-flow/docs fixes
+- Source, docs, package metadata, and WordPress plugin entry points are aligned on `2.2.3`
+- Local QA passes: `node --check`, `npm run build`, `npm run build:wp`, zip contents inspection, and `npm pack --dry-run`
+- WordPress package build succeeds and outputs `dist/seguru-debug-toolbar-wp-v2.2.3.zip`
+- Manual browser QA on a real builder page is still pending
 
 **Next session should:**
-1. Do the final human visual QA on a real builder page, with special attention to dark hero sections, nested full-label stacks, and Tree jump behavior
-2. Create and push release tags for `v2.0.0` / `v2.1.0` if you want the repo history formalized
-3. Decide whether to move on to npm publish / CDN distribution work from the roadmap
+1. Create and push the `v2.2.3` tag and publish the GitHub release so the workflow ships the patch
+2. Do the final human visual QA on a real builder page, with special attention to dark hero sections, nested full-label stacks, and Tree jump behavior
+3. Decide whether to remove `continue-on-error: true` from `publish-npm` after a few more green releases
 
 ---
 

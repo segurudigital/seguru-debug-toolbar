@@ -10,6 +10,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ---
 
+## [2.2.3] — 2026-04-16
+
+### Fixed
+
+- **Manual npm re-run path in `release-assets.yml`** — `workflow_dispatch` retries now resolve the tag input in the `publish-npm` job, so rerunning `gh workflow run release-assets.yml -f tag=v2.2.3` checks out the correct ref before publish instead of failing on an empty tag.
+- **README npm install guidance** — the bundled-app example no longer points at a nonexistent `/seguru-debug-toolbar.min.js` path immediately after `npm install`. The docs now show a dev-only source import and explicitly note that a public-root script tag requires copying the built file into `public/` first.
+- **WordPress install docs** — `docs/wordpress.md` now points at the real versioned build artifact (`seguru-debug-toolbar-wp-vX.Y.Z.zip`) so local build/install instructions match `npm run build:wp`.
+
+### Changed
+
+- **AI-agent rollout prompt** — switched the recommended CDN example to the canonical npm-backed jsDelivr URL and added the scoped npm install path plus the corrected React/Next bundled-app pattern.
+- **Agent handoff docs** — `AGENTS.md` and `TASKS.md` now reflect the current 2.2.x release line and scoped npm package name.
+
+---
+
 ## [2.2.2] — 2026-04-16
 
 ### Changed

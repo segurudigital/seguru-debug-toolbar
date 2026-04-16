@@ -120,8 +120,15 @@ jobs:
       - name: Resolve release tag
         id: tag
         env:
+          EVENT_NAME: ${{ github.event_name }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: echo "name=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          if [ "$EVENT_NAME" = "release" ]; then
+            echo "name=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=$INPUT_TAG" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Checkout at release tag
         uses: actions/checkout@v4
