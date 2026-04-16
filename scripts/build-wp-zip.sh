@@ -151,8 +151,10 @@ No. The entire plugin is a single ~42 KB minified JavaScript file that only load
 * Expanded WordPress settings-page documentation
 EOF
 
-# Inject version into readme.txt
-sed -i '' "s/__VERSION__/${VERSION}/" "$TMP_DIR/seguru-debug-toolbar/readme.txt"
+# Inject version into readme.txt.
+# perl -i is portable across BSD (macOS) and GNU (Linux CI) sed, which diverge
+# on the -i flag syntax — BSD requires a backup suffix argument, GNU doesn't.
+perl -i -pe "s/__VERSION__/${VERSION}/" "$TMP_DIR/seguru-debug-toolbar/readme.txt"
 
 # Create the zip
 cd "$TMP_DIR"
