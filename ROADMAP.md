@@ -39,9 +39,10 @@ Getting the package onto the standard install paths and making it look the part.
 
 ### npm + CDN
 
-- [ ] **Publish to npm** — `npm publish` under `seguru-digital` org once v2.1.0 is tagged and tested. Package name: `seguru-debug-toolbar`.
-- [ ] **CDN availability** — jsDelivr mirrors npm automatically after publish. Canonical CDN URL: `https://cdn.jsdelivr.net/npm/seguru-debug-toolbar/dist/seguru-debug-toolbar.min.js`
-- [ ] **Update README install section** — replace manual download instructions with npm + CDN options once the package is live.
+- [x] **Publish to npm** — automated via `release-assets.yml` → `publish-npm` job, gated on `NPM_TOKEN` repo secret. Package name: `@segurudigital/seguru-debug-toolbar` (scoped to the `segurudigital` npm org, public access).
+- [x] **CDN availability (GitHub direct)** — jsDelivr serves from GitHub tags today: `https://cdn.jsdelivr.net/gh/segurudigital/seguru-debug-toolbar@vX.Y.Z/dist/seguru-debug-toolbar.min.js`. Works immediately on every release, no npm dependency.
+- [ ] **CDN availability (via npm)** — once the npm publish lands, the npm-backed URL becomes preferred (smaller, better-cached): `https://cdn.jsdelivr.net/npm/@segurudigital/seguru-debug-toolbar/dist/seguru-debug-toolbar.min.js`. Swap the README + agent-rollout-prompt examples over at that point.
+- [x] **Update README install section** — replaced manual-only instructions with jsDelivr-from-GitHub + manual + WordPress options. Add npm option after first successful npm publish.
 
 ### WordPress.org submission
 

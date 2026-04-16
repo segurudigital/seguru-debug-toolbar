@@ -38,13 +38,22 @@ add_action( 'wp_enqueue_scripts', function () {
     $file = $dir . '/seguru-debug-toolbar.min.js';
     $url  = plugin_dir_url( __FILE__ ) . 'seguru-debug-toolbar/seguru-debug-toolbar.min.js';
 
-    // Fallback: check npm in the active theme
+    // Fallback: check npm in the active theme.
+    // Checks the scoped path first (canonical since v2.2.2) then the legacy
+    // unscoped path for themes installed before the rename to @segurudigital/.
     if ( ! file_exists( $file ) ) {
-        $theme_path = get_stylesheet_directory() . '/node_modules/seguru-debug-toolbar/dist/seguru-debug-toolbar.min.js';
-        $theme_url  = get_stylesheet_directory_uri() . '/node_modules/seguru-debug-toolbar/dist/seguru-debug-toolbar.min.js';
-        if ( file_exists( $theme_path ) ) {
-            $file = $theme_path;
-            $url  = $theme_url;
+        $candidates = [
+            '/node_modules/@segurudigital/seguru-debug-toolbar/dist/seguru-debug-toolbar.min.js',
+            '/node_modules/seguru-debug-toolbar/dist/seguru-debug-toolbar.min.js',
+        ];
+        foreach ( $candidates as $rel ) {
+            $theme_path = get_stylesheet_directory() . $rel;
+            $theme_url  = get_stylesheet_directory_uri() . $rel;
+            if ( file_exists( $theme_path ) ) {
+                $file = $theme_path;
+                $url  = $theme_url;
+                break;
+            }
         }
     }
 

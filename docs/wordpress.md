@@ -65,10 +65,10 @@ If your WordPress theme already uses npm:
 
 ```bash
 cd wp-content/themes/your-theme
-npm install seguru-debug-toolbar
+npm install @segurudigital/seguru-debug-toolbar
 ```
 
-The mu-plugin auto-detects the JS file at `your-theme/node_modules/seguru-debug-toolbar/dist/seguru-debug-toolbar.min.js` if it can't find the manual install path.
+The mu-plugin auto-detects the JS file at `your-theme/node_modules/@segurudigital/seguru-debug-toolbar/dist/seguru-debug-toolbar.min.js` if it can't find the manual install path.
 
 ---
 
