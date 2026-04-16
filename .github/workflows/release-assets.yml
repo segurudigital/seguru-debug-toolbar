@@ -1,0 +1,98 @@
+name: Attach release assets
+
+# Builds the minified JS and the WordPress plugin zip on every published release,
+# then attaches both as assets on that release. The WordPress self-update hook
+# in wordpress/seguru-debug-toolbar/seguru-debug-toolbar.php requires the zip
+# asset to exist on the release and match the name pattern
+# /seguru-debug-toolbar-wp-v[\d.]+\.zip/ — this workflow is what guarantees that.
+#
+# Trigger: publishing a release via the GitHub UI, `gh release create`, or the
+# "Publish release" button on a previously-drafted release.
+#
+# Manual re-run: use the "workflow_dispatch" trigger below with the tag name
+# (e.g. v2.2.0) — useful if the first run failed and you need to retry without
+# deleting and re-creating the release.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to attach assets to (e.g. v2.2.0)"
+        required: true
+
+permissions:
+  contents: write  # required to upload release assets via gh release upload
+
+jobs:
+  build-and-attach:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve release tag
+        id: tag
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          if [ "$EVENT_NAME" = "release" ]; then
+            echo "name=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=$INPUT_TAG" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout at release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tag.outputs.name }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify package.json version matches release tag
+        env:
+          TAG_NAME: ${{ steps.tag.outputs.name }}
+        run: |
+          pkg_version=$(node -p "require('./package.json').version")
+          expected="v${pkg_version}"
+          if [ "$TAG_NAME" != "$expected" ]; then
+            echo "::error::Release tag ($TAG_NAME) does not match package.json version ($expected)."
+            echo "::error::Bump package.json to ${TAG_NAME#v} before tagging, or retag with the correct version."
+            exit 1
+          fi
+
+      - name: Build minified JS
+        run: npm run build
+
+      - name: Build WordPress plugin zip
+        run: npm run build:wp
+
+      - name: Locate built zip
+        id: zip
+        run: |
+          zip_path=$(ls dist/seguru-debug-toolbar-wp-v*.zip 2>/dev/null | head -n1)
+          if [ -z "$zip_path" ]; then
+            echo "::error::Expected dist/seguru-debug-toolbar-wp-v<version>.zip, found nothing."
+            ls -la dist/
+            exit 1
+          fi
+          echo "path=$zip_path" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$zip_path")" >> "$GITHUB_OUTPUT"
+
+      - name: Upload assets to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ steps.tag.outputs.name }}
+          ZIP_PATH: ${{ steps.zip.outputs.path }}
+        run: |
+          gh release upload "$TAG_NAME" \
+            "$ZIP_PATH" \
+            "dist/seguru-debug-toolbar.min.js" \
+            --clobber

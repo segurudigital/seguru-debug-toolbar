@@ -10,6 +10,34 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ---
 
+## [2.2.0] — 2026-04-16
+
+### Added
+
+- **GitHub-based self-update for the WordPress plugin** — the installable plugin now queries the GitHub releases API every 6 hours and surfaces a standard "Update available" notice on the Plugins and Dashboard → Updates screens. One click installs the new zip via the normal WP upgrader. No separate update server or subscription required. Response cached in the `sdt_github_release` transient; clear it to force a recheck.
+- **jsDelivr install path** — documented CDN install via `cdn.jsdelivr.net/gh/seguru-digital/seguru-debug-toolbar@<tag>` with pinning guidance (`@v2` for auto-minor, `@vX.Y.Z` for production, `@latest` for wireframes only).
+- **AI-agent rollout prompt** — `docs/agent-rollout-prompt.md` — pasteable, self-contained prompt for Claude Code, ChatGPT, Codex, Cursor, and any other LLM-based agent. Instructs the agent to install the toolbar, apply the Seguru naming convention for `data-ref`, and keep refs stable from wireframe through to production.
+- **`startHidden` config key** — `window.seguruDebugConfig.startHidden` (default `true`) controls whether the toolbar loads visible or hidden. Override to `false` to restore pre-2.2.0 behaviour per-page.
+- **WordPress admin toggle: "Start hidden"** — new checkbox under Display (default on) maps to `sdt_start_hidden` option and feeds through to the JS as `startHidden`.
+- **Release workflow** — `.github/workflows/release-assets.yml` attaches `seguru-debug-toolbar.min.js` and `seguru-debug-toolbar-wp-v<version>.zip` to every published GitHub release, verifies `package.json` matches the release tag, and supports manual re-runs via `workflow_dispatch`.
+
+### Changed
+
+- **Default Labels mode is now Full (mode 2)** — was Icons. Labels show persistent text on every `data-ref` element out of the box. Press `L` to cycle.
+- **Default Depth is now Elements** — was Sections. Auto-ref scans the densest level by default so every meaningful element is tagged without a manual step.
+- **Default presentation mode is ON** — the toolbar loads hidden on every page. Press `H` to reveal. Keeps screenshots, Chrome debug captures (including AI-agent browsing sessions), and client demos clean by default without a per-page opt-out.
+- **WordPress admin — "Default mode" radio order** — Full now appears first and is marked `(default)`. Icons and Off follow.
+- **Docs refreshed** — `docs/usage-guide.md` Presentation mode section, Depth section, and Full mode description all reflect the new defaults. `docs/wordpress.md` gets a new "Automatic updates from GitHub" subsection. `README.md` Install section leads with the CDN snippet.
+- **Agent context (`AGENTS.md`)** — new "Release flow" section documents the three-step cut-a-release process; new entries in "What to read when" for the rollout prompt.
+
+### Migration notes
+
+- **Existing WordPress installs on v2.1.0 will not receive the update notice automatically** — the self-update hook is new in 2.2.0, so the first upgrade requires one manual zip upload per site. All subsequent releases update in-place.
+- **Clients used to the toolbar appearing on load will need to press H** the first time they visit a page after the upgrade. If this is undesirable for a specific site, an admin can untick "Start hidden" under Settings → Debug Toolbar.
+- **Per-page overrides are backwards-compatible** — `window.seguruDebugConfig` still accepts the same keys as before. The new `startHidden` key is additive.
+
+---
+
 ## [2.1.0] — 2026-04-11
 
 ### Added

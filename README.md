@@ -75,6 +75,23 @@ We use it for wireframe QA, copy review, client revision rounds, and debugging b
 
 ## Install
 
+**CDN (recommended — zero install, auto-updates):**
+
+Load directly from jsDelivr, which serves any GitHub release unchanged. No build, no download, no npm dependency:
+
+```html
+<!-- Track the 2.x line — receives minor + patch updates automatically -->
+<script src="https://cdn.jsdelivr.net/gh/seguru-digital/seguru-debug-toolbar@v2/dist/seguru-debug-toolbar.min.js" defer></script>
+
+<!-- Or pin to an exact version (recommended for production) -->
+<script src="https://cdn.jsdelivr.net/gh/seguru-digital/seguru-debug-toolbar@v2.2.0/dist/seguru-debug-toolbar.min.js" defer></script>
+
+<!-- Or always the latest release (use in wireframes / staging only) -->
+<script src="https://cdn.jsdelivr.net/gh/seguru-digital/seguru-debug-toolbar@latest/dist/seguru-debug-toolbar.min.js" defer></script>
+```
+
+Pinning by major (`@v2`) is the sweet spot — stay current on bug fixes, avoid breaking changes. Pin to an exact tag for client production sites where you want a manual upgrade step.
+
 **Manual (any project):**
 
 Download `dist/seguru-debug-toolbar.min.js` from this repo and drop it in your project. Include it with a script tag:
@@ -96,7 +113,9 @@ npm run build:wp
 
 Upload via wp-admin → Plugins → Add New → Upload, activate, configure under Settings → Debug Toolbar. An mu-plugin drop-in is also included in `wordpress/seguru-debug-toolbar.php`.
 
-> **npm and CDN installs are coming.** The package will be published to npm once v2.1.0 is tagged. jsDelivr will mirror it automatically after that. See [Roadmap](ROADMAP.md) for status.
+The installable plugin checks the GitHub releases API every 6 hours. When a newer version is tagged, WordPress shows a standard "Update available" notice on the Plugins screen — click **Update Now** and the new zip is pulled and installed like any wp.org plugin. No separate update service or subscription needed.
+
+> **npm is coming.** The package will be published to npm once v2.2.0 is tagged. Until then, CDN or manual install. See [Roadmap](ROADMAP.md) for status.
 
 ---
 
@@ -118,6 +137,7 @@ The toolbar only loads for administrators, so regular site visitors never see it
 | [WordPress Setup](docs/wordpress.md) | Installable plugin, mu-plugin, capability gating, Gutenberg blocks, client handoff |
 | [Page Builders](docs/page-builders.md) | Built-in class converter, auto-ref, plus manual setup for Elementor, Bricks, Oxygen, Breakdance, Gutenberg |
 | [Naming Conventions](docs/naming-conventions.md) | `data-ref` patterns for websites, web apps, and multi-surface products |
+| [AI-Agent Rollout Prompt](docs/agent-rollout-prompt.md) | Copy-paste prompt for Claude Code / ChatGPT / Codex / Cursor to roll out the toolbar + `data-ref` tagging into any project |
 | [Design](docs/DESIGN.md) | IA, UI spec, colour system, badge placement, and visual hierarchy |
 | [WP Settings Page](docs/wp-settings-page.md) | IA and UI spec for the WordPress admin settings page |
 

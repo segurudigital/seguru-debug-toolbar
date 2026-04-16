@@ -34,7 +34,7 @@ The toolbar picks these up automatically on page load. No registration step, no 
 
 The **Labels** dropdown on the toolbar controls how labels appear. Click it to select a mode, or press **L** to cycle through them (the shortcut is disabled when focus is in an input field, textarea, select, or contenteditable element).
 
-### Icons (mode 0 — default)
+### Icons (mode 0)
 
 A small orange dot appears at the top-left of each `data-ref` element. Hover the dot to reveal a dark tooltip showing the full ref value. The tooltip also stays visible if the cursor moves from the dot onto the tooltip text. The dot is intentionally subtle so it doesn't interfere with visual review. When nearby labels would collide, the toolbar uses a depth-aware stagger, nudging deeper labels into a cleaner stepped stack and drawing a thin leader line back to the element corner so the reference stays visually anchored.
 
@@ -42,7 +42,7 @@ A small orange dot appears at the top-left of each `data-ref` element. Hover the
 
 All labels are hidden. The page looks exactly as it would to an end user. Use this mode for screenshots, client presentations, or any time you need a clean view.
 
-### Full (mode 2)
+### Full (mode 2 — default)
 
 A persistent text label appears at the top-left of every `data-ref` element, showing the full ref value at all times. Labels use a dark background with white text for high contrast against any design. This mode is best for QA passes and cross-referencing against copy documents or wireframes. If neighboring labels overlap, the toolbar automatically staggers them in a depth-aware stepped pattern and adds a leader line back to the original element corner. Long labels are clipped cleanly instead of sprawling across dense nested layouts.
 
@@ -50,15 +50,19 @@ A persistent text label appears at the top-left of every `data-ref` element, sho
 
 ## Presentation mode
 
-Press **H** to instantly hide the toolbar and all labels from the page. Press **H** again to restore everything. This is separate from the Off label mode — Off hides labels but keeps the toolbar visible. Presentation mode hides both.
+The toolbar loads in **presentation mode by default** — the script runs, labels are prepared in the DOM, but nothing is visible. Press **H** to reveal the toolbar and labels. Press **H** again to hide them.
 
-Use it before taking screenshots, recording demos, or presenting to a client on a shared screen when you don't want the toolbar visible.
+This default keeps screenshots, Chrome debug captures (including AI-agent browsing sessions), and client demos clean without any extra step. Anyone who wants the toolbar can bring it up with one keypress.
+
+To restore legacy "visible on load" behaviour per-page, set `window.seguruDebugConfig = { startHidden: false }` before the script tag. In the WordPress plugin, turn off **Start hidden** under Settings → Debug Toolbar.
+
+Presentation mode is separate from the Off label mode — Off hides labels but keeps the toolbar visible. Presentation mode hides both.
 
 ---
 
 ## Depth control
 
-The **Depth** dropdown controls what gets auto-labelled. Click it to select a level, or press **D** to cycle through them.
+The **Depth** dropdown controls what gets auto-labelled. Click it to select a level, or press **D** to cycle through them. The default is **Elements** — the densest view, useful for full-coverage QA and for AI agents reading the page to generate feedback against every meaningful element.
 
 ### Off
 

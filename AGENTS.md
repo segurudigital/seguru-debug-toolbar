@@ -84,6 +84,28 @@ When bumping the version, update ALL of these:
 
 ---
 
+## Release flow
+
+Cutting a release:
+
+1. Bump versions in all five locations above, commit, push to `main`.
+2. Create the GitHub release:
+   ```
+   gh release create v2.2.0 --title "v2.2.0" --notes-file RELEASE_NOTES.md
+   ```
+   Or use the GitHub web UI. The tag must match `v<package.json version>` exactly — the workflow fails loud if it doesn't.
+3. The `.github/workflows/release-assets.yml` workflow fires on `release: published`, runs `npm run build` + `npm run build:wp`, and attaches both `seguru-debug-toolbar.min.js` and `seguru-debug-toolbar-wp-v<version>.zip` as release assets.
+4. Once assets are attached, the WP self-update hook (in the installable plugin) and jsDelivr (via tag) both start serving the new version within minutes.
+
+If the workflow fails midway, re-run it manually:
+```
+gh workflow run release-assets.yml -f tag=v2.2.0
+```
+
+The self-update hook in existing WordPress installs won't see the new version until the `sdt_github_release` transient expires (6 hours) or is cleared manually.
+
+---
+
 ## Build commands
 
 ```bash
@@ -176,6 +198,8 @@ All user-facing documentation is in `docs/`. When changing behaviour, update the
 | Brand or colour decisions | `docs/DESIGN.md` + Brand Handbook §10 |
 | WordPress changes | `docs/wordpress.md` + `docs/wp-settings-page.md` |
 | Page builder support | `docs/page-builders.md` |
+| Rolling the toolbar out into a different project | `docs/agent-rollout-prompt.md` (copy-paste prompt for external agents) |
+| Changing the default-behaviour rollout prompt | `docs/agent-rollout-prompt.md` — keep in sync with `src/seguru-debug-toolbar.js` defaults |
 | New feature spec | ROADMAP.md |
 
 ---

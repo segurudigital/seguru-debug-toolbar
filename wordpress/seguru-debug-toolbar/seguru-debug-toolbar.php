@@ -3,7 +3,7 @@
  * Plugin Name:  Seguru Debug Toolbar
  * Plugin URI:   https://github.com/seguru-digital/seguru-debug-toolbar
  * Description:  Visual overlay for data-ref element labels. Shows section references on the front end for admins — useful for QA, revision feedback, and bug reporting.
- * Version:      2.1.0
+ * Version:      2.2.0
  * Author:       Seguru Digital
  * Author URI:   https://seguru.digital
  * License:      MIT
@@ -19,7 +19,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 // ── Constants ─────────────────────────────────────────────────
-define( 'SDT_VERSION', '2.1.0' );
+define( 'SDT_VERSION', '2.2.0' );
 define( 'SDT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SDT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SDT_OPTION_GROUP', 'sdt_settings' );
@@ -28,7 +28,8 @@ define( 'SDT_OPTION_GROUP', 'sdt_settings' );
 function sdt_defaults() {
     return [
         'sdt_enabled'         => '0',
-        'sdt_default_mode'    => '0',
+        'sdt_default_mode'    => '2',
+        'sdt_start_hidden'    => '1',
         'sdt_position'        => 'bottom-right',
         'sdt_min_role'        => 'administrator',
         'sdt_class_converter'  => '0',
@@ -68,8 +69,14 @@ add_action( 'admin_init', function () {
 
     register_setting( SDT_OPTION_GROUP, 'sdt_default_mode', [
         'type'              => 'string',
-        'sanitize_callback' => function ( $v ) { return in_array( $v, sdt_allowed_modes(), true ) ? $v : '0'; },
-        'default'           => '0',
+        'sanitize_callback' => function ( $v ) { return in_array( $v, sdt_allowed_modes(), true ) ? $v : '2'; },
+        'default'           => '2',
+    ] );
+
+    register_setting( SDT_OPTION_GROUP, 'sdt_start_hidden', [
+        'type'              => 'string',
+        'sanitize_callback' => function ( $v ) { return $v === '1' ? '1' : '0'; },
+        'default'           => '1',
     ] );
 
     register_setting( SDT_OPTION_GROUP, 'sdt_position', [
@@ -131,6 +138,128 @@ add_action( 'admin_notices', function () {
     echo '</div>';
 } );
 
+// ── GitHub-based self-update ──────────────────────────────────
+// Checks the GitHub releases API for newer versions and feeds the zip asset
+// into WordPress's native update flow. Admins see a standard "Update available"
+// notice on Plugins and Dashboard → Updates, same as any wp.org plugin.
+//
+// Release zip asset name must match /seguru-debug-toolbar-wp-v[\d.]+\.zip/
+// (the output of scripts/build-wp-zip.sh).
+define( 'SDT_GITHUB_REPO', 'seguru-digital/seguru-debug-toolbar' );
+define( 'SDT_UPDATE_CACHE_KEY', 'sdt_github_release' );
+define( 'SDT_UPDATE_CACHE_TTL', 6 * HOUR_IN_SECONDS );
+
+function sdt_fetch_latest_release() {
+    $cached = get_transient( SDT_UPDATE_CACHE_KEY );
+    if ( false !== $cached ) return $cached;
+
+    $response = wp_remote_get( 'https://api.github.com/repos/' . SDT_GITHUB_REPO . '/releases/latest', [
+        'timeout' => 10,
+        'headers' => [
+            'Accept'     => 'application/vnd.github+json',
+            'User-Agent' => 'seguru-debug-toolbar WordPress updater',
+        ],
+    ] );
+
+    if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
+        // Cache the failure for a shorter window so we don't hammer GitHub on outages.
+        set_transient( SDT_UPDATE_CACHE_KEY, [ 'error' => true ], 30 * MINUTE_IN_SECONDS );
+        return [ 'error' => true ];
+    }
+
+    $data = json_decode( wp_remote_retrieve_body( $response ), true );
+    if ( ! is_array( $data ) ) {
+        set_transient( SDT_UPDATE_CACHE_KEY, [ 'error' => true ], 30 * MINUTE_IN_SECONDS );
+        return [ 'error' => true ];
+    }
+
+    set_transient( SDT_UPDATE_CACHE_KEY, $data, SDT_UPDATE_CACHE_TTL );
+    return $data;
+}
+
+function sdt_release_zip_url( $release ) {
+    if ( empty( $release['assets'] ) || ! is_array( $release['assets'] ) ) return '';
+    foreach ( $release['assets'] as $asset ) {
+        if ( ! empty( $asset['name'] ) && preg_match( '/^seguru-debug-toolbar-wp-v[\d.]+\.zip$/', $asset['name'] ) ) {
+            return $asset['browser_download_url'] ?? '';
+        }
+    }
+    return '';
+}
+
+add_filter( 'pre_set_site_transient_update_plugins', function ( $transient ) {
+    if ( empty( $transient ) || ! is_object( $transient ) ) return $transient;
+
+    $release = sdt_fetch_latest_release();
+    if ( empty( $release ) || ! empty( $release['error'] ) ) return $transient;
+
+    $latest = isset( $release['tag_name'] ) ? ltrim( $release['tag_name'], 'vV' ) : '';
+    if ( ! $latest || version_compare( $latest, SDT_VERSION, '<=' ) ) return $transient;
+
+    $zip_url = sdt_release_zip_url( $release );
+    if ( ! $zip_url ) return $transient;
+
+    $plugin_file = plugin_basename( __FILE__ );
+    $transient->response[ $plugin_file ] = (object) [
+        'id'            => 'github.com/' . SDT_GITHUB_REPO,
+        'slug'          => 'seguru-debug-toolbar',
+        'plugin'        => $plugin_file,
+        'new_version'   => $latest,
+        'url'           => 'https://github.com/' . SDT_GITHUB_REPO,
+        'package'       => $zip_url,
+        'tested'        => '6.7',
+        'requires'      => '5.8',
+        'requires_php'  => '8.1',
+        'icons'         => [],
+        'banners'       => [],
+        'compatibility' => new stdClass(),
+    ];
+    return $transient;
+} );
+
+add_filter( 'plugins_api', function ( $result, $action, $args ) {
+    if ( $action !== 'plugin_information' ) return $result;
+    if ( empty( $args->slug ) || $args->slug !== 'seguru-debug-toolbar' ) return $result;
+
+    $release = sdt_fetch_latest_release();
+    if ( empty( $release ) || ! empty( $release['error'] ) ) return $result;
+
+    $latest  = isset( $release['tag_name'] ) ? ltrim( $release['tag_name'], 'vV' ) : '';
+    $zip_url = sdt_release_zip_url( $release );
+
+    // GitHub markdown → minimal HTML for the "View details" modal.
+    $changelog_md   = $release['body'] ?? '';
+    $changelog_html = $changelog_md
+        ? wpautop( wp_kses_post( $changelog_md ) )
+        : '<p>See the <a href="https://github.com/' . esc_attr( SDT_GITHUB_REPO ) . '/releases" target="_blank" rel="noopener">GitHub releases page</a> for notes.</p>';
+
+    return (object) [
+        'name'          => 'Seguru Debug Toolbar',
+        'slug'          => 'seguru-debug-toolbar',
+        'version'       => $latest ?: SDT_VERSION,
+        'author'        => '<a href="https://seguru.digital">Seguru Digital</a>',
+        'homepage'      => 'https://github.com/' . SDT_GITHUB_REPO,
+        'requires'      => '5.8',
+        'tested'        => '6.7',
+        'requires_php'  => '8.1',
+        'download_link' => $zip_url,
+        'trunk'         => $zip_url,
+        'last_updated'  => $release['published_at'] ?? '',
+        'sections'      => [
+            'description' => 'Visual overlay for <code>data-ref</code> element labels. Used for QA, revision feedback, bug reporting, and AI-assisted design review.',
+            'changelog'   => $changelog_html,
+        ],
+    ];
+}, 10, 3 );
+
+// Clear the cached release after any plugin upgrade so post-update the next
+// update check sees the current installed version, not a stale cached reply.
+add_action( 'upgrader_process_complete', function ( $_upgrader, $data ) {
+    if ( isset( $data['type'] ) && $data['type'] === 'plugin' ) {
+        delete_transient( SDT_UPDATE_CACHE_KEY );
+    }
+}, 10, 2 );
+
 // ── Front-end enqueue ─────────────────────────────────────────
 add_action( 'wp_enqueue_scripts', function () {
 
@@ -154,6 +283,7 @@ add_action( 'wp_enqueue_scripts', function () {
     // Pass config to the JS
     wp_localize_script( 'seguru-debug-toolbar', 'sdtConfig', [
         'defaultMode'    => sdt_get( 'sdt_default_mode' ),
+        'startHidden'    => sdt_get( 'sdt_start_hidden' ),
         'position'       => sdt_get( 'sdt_position' ),
         'classConverter' => sdt_get( 'sdt_class_converter' ),
         'autoRef'        => sdt_get( 'sdt_auto_ref' ),
@@ -166,6 +296,7 @@ function sdt_render_settings_page() {
 
     $enabled         = sdt_get( 'sdt_enabled' );
     $default_mode    = sdt_get( 'sdt_default_mode' );
+    $start_hidden    = sdt_get( 'sdt_start_hidden' );
     $position        = sdt_get( 'sdt_position' );
     $min_role        = sdt_get( 'sdt_min_role' );
     $class_converter = sdt_get( 'sdt_class_converter' );
@@ -228,6 +359,10 @@ function sdt_render_settings_page() {
                         <span class="sdt-field__label">Default mode</span>
                         <div class="sdt-radios">
                             <label>
+                                <input type="radio" name="sdt_default_mode" value="2" <?php checked( $default_mode, '2' ); ?>>
+                                Full <span class="desc">— all labels visible immediately (default)</span>
+                            </label>
+                            <label>
                                 <input type="radio" name="sdt_default_mode" value="0" <?php checked( $default_mode, '0' ); ?>>
                                 Icons <span class="desc">— small dot on each section, hover to see the label</span>
                             </label>
@@ -235,13 +370,21 @@ function sdt_render_settings_page() {
                                 <input type="radio" name="sdt_default_mode" value="1" <?php checked( $default_mode, '1' ); ?>>
                                 Off <span class="desc">— toolbar loads but labels start hidden</span>
                             </label>
-                            <label>
-                                <input type="radio" name="sdt_default_mode" value="2" <?php checked( $default_mode, '2' ); ?>>
-                                Full <span class="desc">— all labels visible immediately</span>
-                            </label>
                         </div>
                         <p class="sdt-desc">
                             You can always cycle between modes by pressing <kbd>L</kbd> on the front end.
+                        </p>
+                    </div>
+
+                    <div class="sdt-field" style="margin-top: 16px;">
+                        <label>
+                            <input type="checkbox" name="sdt_start_hidden" value="1" <?php checked( $start_hidden, '1' ); ?>>
+                            Start hidden (press <kbd>H</kbd> to reveal)
+                        </label>
+                        <p class="sdt-desc">
+                            Recommended. The toolbar loads but stays out of the way until you press <kbd>H</kbd> —
+                            keeps screenshots, Chrome debug captures, AI-agent browsing sessions, and client demos clean by default.
+                            Turn off if you'd rather the toolbar appear on every page load.
                         </p>
                     </div>
 

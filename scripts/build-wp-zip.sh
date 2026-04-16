@@ -118,6 +118,16 @@ No. The entire plugin is a single ~42 KB minified JavaScript file that only load
 
 == Changelog ==
 
+= 2.2.0 =
+* New default behaviour: toolbar loads hidden — press H to reveal. Keeps screenshots, Chrome debug captures, and client demos clean.
+* New defaults: Labels = Full, Depth = Elements (densest auto-ref scan by default)
+* Added GitHub-based self-update — wp-admin shows "Update available" notices when new releases ship, one-click install via normal WP upgrader
+* Added "Start hidden" admin toggle under Settings → Debug Toolbar → Display
+* Added `startHidden` per-page override via `window.seguruDebugConfig`
+* Added jsDelivr install path for non-WordPress consumers (CDN-served, pin by major version)
+* Added pasteable AI-agent rollout prompt for Claude Code / ChatGPT / Codex / Cursor
+* Automated GitHub Actions workflow attaches plugin zip to every release
+
 = 2.1.0 =
 * Added Outline guides for sections and blocks
 * Added leader lines and depth-aware label staggering for dense layouts

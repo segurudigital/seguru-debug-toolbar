@@ -12,11 +12,15 @@
  * Three modes cycled by clicking buttons or pressing L:
  *   0 = Icons   — small dot per element, hover to see full label
  *   1 = Off     — nothing shown, clean view for screenshots
- *   2 = Full    — always-visible text labels on every element
+ *   2 = Full    — always-visible text labels on every element (default)
  *
  * Press H to toggle presentation mode: hides toolbar + all labels.
+ *   By default the toolbar loads in presentation mode (hidden) so it stays
+ *   out of screenshots, AI/Chrome debug sessions, and client demos. Press H
+ *   to reveal the toolbar and labels. Override with seguruDebugConfig.startHidden = false.
  * Press D to cycle auto-ref depth: Off → Sections → Blocks → Elements.
- * Use Outline to show section/block boundaries for spacing QA.
+ *   Default depth is Elements for the densest debugging view.
+ * Use Outline to show section/block boundaries for spacing QA (off by default).
  *
  * Click any label to copy the data-ref value to clipboard.
  *
@@ -105,22 +109,27 @@
   var pageConfig = (typeof window.seguruDebugConfig !== 'undefined') ? window.seguruDebugConfig : {};
   // Merge: pageConfig values win over wpConfig values
   var config = {};
-  var _keys = ['defaultMode', 'classConverter', 'autoRef', 'autoRefDepth', 'outlineMode', 'position', 'pageSlug'];
+  var _keys = ['defaultMode', 'classConverter', 'autoRef', 'autoRefDepth', 'outlineMode', 'position', 'pageSlug', 'startHidden'];
   for (var _i = 0; _i < _keys.length; _i++) {
     var _k = _keys[_i];
     config[_k] = (_k in pageConfig) ? pageConfig[_k] : wpConfig[_k];
   }
 
-  var state = parseInt(config.defaultMode, 10) || 0; // 0=icons, 1=off, 2=full
+  // 0=icons, 1=off, 2=full. Default 2 (Full) when no config provided.
+  var _parsedMode = parseInt(config.defaultMode, 10);
+  var state = isNaN(_parsedMode) ? 2 : _parsedMode;
 
   // Feature flags
   var classConverterEnabled = config.classConverter === '1' || config.classConverter === true;
   var autoRefEnabled = config.autoRef === '1' || config.autoRef === true;
-  var autoRefDepth = config.autoRefDepth || 'section'; // section | block | element
+  var autoRefDepth = config.autoRefDepth || 'element'; // section | block | element (default element)
   var outlineMode = config.outlineMode || 'off'; // off | section | block
 
-  // Presentation mode — H key hides toolbar + all labels
-  var presentationMode = false;
+  // Presentation mode — H key toggles toolbar + label visibility.
+  // Default ON so the toolbar stays out of screenshots, Chrome debug sessions
+  // (e.g. captured by AI agents), and client demos until explicitly revealed.
+  // Set seguruDebugConfig.startHidden = false to restore legacy "visible on load" behaviour.
+  var presentationMode = !(config.startHidden === '0' || config.startHidden === false);
 
   // ─── Position config ────────────────────────────────────────
   var position = config.position || 'bottom-right';
@@ -1810,6 +1819,12 @@
 
     if (state !== 0) setState(state);
     if (outlineMode !== 'off') setOutline(outlineMode);
+
+    // Apply initial presentation mode (hidden by default — press H to reveal).
+    if (presentationMode) {
+      shadowHost.style.display = 'none';
+      setClassState(document.body, 'sdt-presentation', true);
+    }
 
     // Dropdown toggle clicks
     forEachNode(toolbar.querySelectorAll('[data-sdt-toggle]'), function (trigger) {
