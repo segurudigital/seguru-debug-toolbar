@@ -15,20 +15,22 @@ The toolbar has two jobs: show `data-ref` labels and connect back to Seguru as t
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
-│ [S]  [Labels  Icons ▾] [Depth  Off ▾]  │  [Outline Off ▾] [⊞ Tree]       │
+│ [S] [user?]  [Labels Icons ▾] [Target Off ▾]  │  [Outline Off ▾] [⊞ Tree] │
 │      primary controls                  │  utility controls                │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Badge zone** — The Seguru S mark (16px circle, always Seguru Primary Blue `#00C0F3`, white mark) sits at the far left. On hover, a tooltip reads "Powered by Seguru Digital". Clicking opens seguru.digital in a new tab.
+**Badge zone** — The Seguru S mark (20px circle, always Seguru Primary Blue `#00C0F3`, white mark, symmetric padding) sits at the far left. On hover, a tooltip reads "Powered by Seguru Digital". Clicking opens seguru.digital in a new tab. As of v2.3.0 the badge is paired with an optional **identity pill** to its right (avatar + name + role) rendered when the host calls `setUser()`. The pill avatar uses neutral slate so the S badge stays the only Seguru-blue mark in the chrome.
 
-**Labels dropdown** — Controls how labels appear (Icons, Off, Full). Click to open, select an option to apply. Press L to cycle. In the refreshed UI, the control reads as a compact value-led pill instead of a separate label plus value cell.
+**Labels dropdown** — Controls how labels appear (Icons, Off, Full). Click to open, select an option to apply. Press **L** to cycle. In the refreshed UI, the control reads as a compact value-led pill instead of a separate label plus value cell.
 
-**Depth dropdown** — Controls auto-ref depth (Off, Sections, Blocks, Elements). Click to open, select a level. Press D to cycle. It sits beside Labels as the second primary control because those two settings define the main working state of the product.
+**Target dropdown** — Controls auto-ref target depth (Off, Sections, Blocks, Elements). Click to open, select a level. Press **T** to cycle. It sits beside Labels as the second primary control because those two settings define the main working state of the product. (Pre-2.3 builds called this "Depth" and bound it to `D`; the public API still uses `setDepth()` / `getDepth()` for back-compat.)
 
-**Outline dropdown** — Controls optional layout guides (Off, Sections, Blocks). `Sections` outlines top-level wrappers with a strong orange frame plus a subtle inset wash so the page skeleton reads quickly. `Blocks` keeps those section outlines and adds lighter dashed boundaries for inner containers and blocks, making overlap and spacing relationships visible without needing element-level labels. This lives in the utility zone because it is diagnostic rather than always-primary.
+**Outline dropdown** — Controls optional layout guides (Off, Sections, Blocks). Press **O** to cycle. `Sections` outlines top-level wrappers with a strong orange frame plus a subtle inset wash so the page skeleton reads quickly. `Blocks` keeps those section outlines and adds lighter dashed boundaries for inner containers and blocks, making overlap and spacing relationships visible without needing element-level labels. This lives in the utility zone because it is diagnostic rather than always-primary.
 
-**Tree button** — Opens the floating element tree panel for list-based inspection, click-to-jump navigation, and copy actions. This also lives in the utility zone and should visually read as secondary to Labels and Depth.
+**Tree button** — Opens the floating element tree panel for list-based inspection, click-to-jump navigation, and copy actions. This also lives in the utility zone and should visually read as secondary to Labels and Target.
+
+**Visibility hotkey** — Press **D** to show / hide the toolbar (default; configurable via `setHotkey()`). **Esc** is a global one-shot hide that closes any open dropdown, the Tree panel, and the toolbar in a single press.
 
 ### Why the S mark goes on the left
 
@@ -86,11 +88,11 @@ Section outlines are intentionally the loudest structural layer: solid orange, t
 
 ### Tree panel
 
-The Tree panel should read like an inspection surface, not a raw debug list. The header carries the title plus compact context chips (`ref count`, `Depth`, `Outline`) and a short hint line. Rows use a stronger indentation rhythm via guide rails, orange context pills, and a warmer hover state. Hover previews the target element; clicking a row jumps the page to that element and briefly intensifies the highlight so the destination is obvious.
+The Tree panel should read like an inspection surface, not a raw debug list. The header carries the title plus compact context chips (`ref count`, `Target` *(formerly "Depth")*, `Outline`) and a short hint line. Rows use a stronger indentation rhythm via guide rails, orange context pills, and a warmer hover state. Hover previews the target element; clicking a row jumps the page to that element and briefly intensifies the highlight so the destination is obvious.
 
 ### Dropdown triggers
 
-Each dropdown shows the current selection as a compact pill with two text weights: a muted uppercase key (`Labels`, `Depth`, `Outline`) and a stronger value (`Icons`, `Blocks`, `Off`). Clicking opens a popover above or below the toolbar (depending on position). Options show a dot indicator, label, and description. A selected control uses a tinted pill treatment; an open control gets an explicit focus halo and rotated caret so its state is visible even before the menu items are read. A hint at the bottom shows the keyboard shortcut.
+Each dropdown shows the current selection as a compact pill with two text weights: a muted uppercase key (`Labels`, `Target`, `Outline`) and a stronger value (`Icons`, `Blocks`, `Off`). Clicking opens a popover above or below the toolbar (depending on position). Options show a dot indicator, label, and description. A selected control uses a tinted pill treatment; an open control gets an explicit focus halo and rotated caret so its state is visible even before the menu items are read. A hint at the bottom shows the keyboard shortcut.
 
 Utility controls (`Outline`, `Tree`) use the same interaction model, but when active they shift into a more obviously diagnostic treatment so they feel intentionally secondary but clearly enabled.
 
@@ -112,7 +114,7 @@ Utility controls (`Outline`, `Tree`) use the same interaction model, but when ac
 
 ## Visual hierarchy (priority order)
 
-1. **Primary dropdown triggers** — Labels and Depth, the thing you click most
+1. **Primary dropdown triggers** — Labels and Target, the thing you click most
 2. **data-ref labels on the page** — the main output of the tool
 3. **Utility controls** — Outline and Tree, available but visually secondary
 4. **S mark** — brand anchor, passive, noticed but not demanding
@@ -151,7 +153,7 @@ This is the only approved variation of the SDT Orange. Do not use any other oran
 ## States
 
 ### Toolbar at rest
-S mark visible at the left, followed by the primary control pair (`Labels`, `Depth`), then a quieter utility pair (`Outline`, `Tree`). Active controls use a tinted pill treatment rather than relying on text color alone. No dropdowns open, no tooltip.
+S mark visible at the left, optional user pill, followed by the primary control pair (`Labels`, `Target`), then a quieter utility pair (`Outline`, `Tree`). Active controls use a tinted pill treatment rather than relying on text color alone. No dropdowns open, no tooltip.
 
 ### Hover on S mark
 Tooltip fades in above the icon: "Powered by Seguru Digital". Cursor changes to pointer. A subtle external-link indicator (small arrow or underline on the tooltip text) signals it's a link.

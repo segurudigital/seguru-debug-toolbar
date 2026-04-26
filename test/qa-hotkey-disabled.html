@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SDT QA — hotkey: false</title>
+</head>
+<body style="font-family:system-ui;padding:40px;">
+  <h1>Hotkey disabled test</h1>
+  <p><code>seguruDebugConfig.hotkey = false</code> — pressing H should NOT toggle visibility. Only Esc retains a guard binding (and only when the toolbar is open).</p>
+
+  <section data-ref="qa-01-section-a"><h2>Section A</h2></section>
+
+  <input id="qa-input" placeholder="Type here to test typing-target guard" style="margin-top:16px;padding:8px;border:1px solid #D1D5DB;border-radius:4px;">
+
+  <script>
+    window.seguruDebugConfig = {
+      hotkey: false,
+      startHidden: false   // boot visible so we can verify H doesn't dismiss it
+    };
+    window.QA = { initialHotkey: null, ready: false };
+    window.addEventListener('sdt:ready', function () {
+      window.QA.ready = true;
+      window.QA.initialHotkey = window.seguruDebugToolbar.getHotkey();
+    });
+  </script>
+  <script src="../src/seguru-debug-toolbar.js"></script>
+</body>
+</html>

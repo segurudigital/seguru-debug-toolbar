@@ -127,9 +127,9 @@ Author is the lowest we go. Subscriber and Customer roles shouldn't see dev tool
 
 **Class-to-ref converter description:** "Converts CSS classes prefixed with `dataref-` into `data-ref` attributes automatically. Add a class like `dataref-home-01-hero` in any page builder and the toolbar picks it up. Works with every builder, including free tiers that don't support custom HTML attributes."
 
-**Auto-ref description:** "Automatically generates `data-ref` values based on the page slug and position. Elements that already have a `data-ref` (manual or from the class converter) keep their value. Use the **Depth** dropdown on the front-end toolbar (or press **D**) to switch between Sections, Blocks, and Elements."
+**Auto-ref description:** "Automatically generates `data-ref` values based on the page slug and position. Elements that already have a `data-ref` (manual or from the class converter) keep their value. Use the **Target** dropdown on the front-end toolbar (or press **T**) to switch between Sections, Blocks, and Elements."
 
-Depth is controlled exclusively from the front-end toolbar — there is no wp-admin setting for it. This keeps the settings page simple while giving users real-time control on the page they're debugging.
+Target is controlled exclusively from the front-end toolbar — there is no wp-admin setting for it. This keeps the settings page simple while giving users real-time control on the page they're debugging. (Pre-2.3 builds called this "Depth" and bound it to **D**; the public API still uses `setDepth()` / `getDepth()` for back-compat.)
 
 ### 5. How It Works (reference panel)
 
@@ -137,7 +137,7 @@ A read-only card with usage instructions. Not a form — just static HTML styled
 
 **Content:**
 
-> **Keyboard shortcut:** Press **L** to cycle between modes (Icons → Off → Full).
+> **Keyboard shortcuts:** **L** cycles label modes (Icons → Off → Full). **T** cycles Target depth. **O** cycles Outline guides. **D** shows / hides the toolbar. **Esc** dismisses everything. Shortcuts pause when typing in form fields.
 >
 > **Click to copy:** Click any label to copy the `data-ref` value to your clipboard.
 >

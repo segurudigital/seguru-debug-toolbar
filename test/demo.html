@@ -27,7 +27,7 @@
 </head>
 <body>
 
-  <button class="toggle-dark" onclick="document.documentElement.classList.toggle('dark'); this.textContent = document.documentElement.classList.contains('dark') ? 'Light mode' : 'Dark mode'">Dark mode</button>
+  <button class="toggle-dark" id="toggle-dark-btn">Dark mode</button>
 
   <!-- Demo controls to toggle features -->
   <div class="demo-controls">
@@ -35,12 +35,31 @@
     <label><input type="checkbox" id="toggle-cc"> Class Converter</label>
     <label><input type="checkbox" id="toggle-ar"> Auto-Ref</label>
     <hr class="demo-sep">
-    <div>Keys: <strong>L</strong> labels, <strong>D</strong> depth, <strong>H</strong> hide</div>
+    <div>Keys: <strong>L</strong> labels, <strong>T</strong> target, <strong>O</strong> outline, <strong>D</strong> hide, <strong>Esc</strong> close all</div>
     <div>Use <strong>Outline</strong> for section and block boundaries.</div>
     <div>Use the toolbar <strong>Tree</strong> button to inspect the label map.</div>
     <hr class="demo-sep">
+    <h3 style="margin-top:4px">v2.3 API smoke tests</h3>
+    <div style="display:flex;flex-wrap:wrap;gap:4px;">
+      <button class="demo-btn" data-act="hide">hide()</button>
+      <button class="demo-btn" data-act="show">show()</button>
+      <button class="demo-btn" data-act="toggle">toggle()</button>
+      <button class="demo-btn" data-act="theme-light">light</button>
+      <button class="demo-btn" data-act="theme-dark">dark</button>
+      <button class="demo-btn" data-act="theme-auto">auto</button>
+      <button class="demo-btn" data-act="user-set">setUser()</button>
+      <button class="demo-btn" data-act="user-clear">clear user</button>
+      <button class="demo-btn" data-act="dock-cycle">cycle dock</button>
+      <button class="demo-btn" data-act="hotkey-z">hotkey:Z</button>
+    </div>
+    <div id="event-log" style="margin-top:6px;max-height:120px;overflow:auto;font-family:ui-monospace,monospace;font-size:10px;color:#374151;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:3px;padding:4px;"></div>
+    <hr class="demo-sep">
     <button onclick="location.reload()" style="padding:4px 8px;font-size:11px;cursor:pointer;border:1px solid #D1D5DB;border-radius:3px;background:#fff;">Reload</button>
   </div>
+  <style>
+    .demo-btn { padding: 3px 7px; font-size: 10px; cursor: pointer; border: 1px solid #D1D5DB; border-radius: 3px; background: #fff; font-family: inherit; }
+    .demo-btn:hover { background: #F3F4F6; }
+  </style>
 
   <!-- ─── Standard: explicit data-ref attributes ─── -->
   <section class="hero" data-ref="home-01-hero-standard">
@@ -76,23 +95,23 @@
   </footer>
 
   <script>
-    // Read feature flag checkboxes and set seguruDebugConfig before the toolbar loads
+    // Read feature flag checkboxes and set seguruDebugConfig before the toolbar loads.
+    // Only set keys we want to override — let SDT use its own defaults otherwise.
     (function () {
       var params = new URLSearchParams(window.location.search);
-      var cc = params.get('cc') === '1';
-      var ar = params.get('ar') === '1';
+      var ccParam = params.get('cc');  // null | '0' | '1'
+      var arParam = params.get('ar');  // null | '0' | '1'
 
-      window.seguruDebugConfig = {
-        classConverter: cc ? '1' : '0',
-        autoRef: ar ? '1' : '0'
-      };
+      window.seguruDebugConfig = {};
+      if (ccParam !== null) window.seguruDebugConfig.classConverter = ccParam === '1' ? '1' : '0';
+      if (arParam !== null) window.seguruDebugConfig.autoRef        = arParam === '1' ? '1' : '0';
 
-      // Sync checkboxes after DOM loads
+      // Sync checkboxes after DOM loads. With no URL param, the checkbox
+      // reflects the SDT default (classConverter=off, autoRef=on as of v2.3).
       document.addEventListener('DOMContentLoaded', function () {
-        document.getElementById('toggle-cc').checked = cc;
-        document.getElementById('toggle-ar').checked = ar;
+        document.getElementById('toggle-cc').checked = ccParam === '1';
+        document.getElementById('toggle-ar').checked = arParam === null ? true : (arParam === '1');
 
-        // Update URL params on change
         document.getElementById('toggle-cc').addEventListener('change', function () {
           params.set('cc', this.checked ? '1' : '0');
           window.location.search = params.toString();
@@ -105,5 +124,86 @@
     })();
   </script>
   <script src="../src/seguru-debug-toolbar.js"></script>
+
+  <!-- v2.3 API smoke-test wiring -->
+  <script>
+    (function () {
+      var DOCKS = ['bottom-right', 'bottom-left', 'top-right', 'top-left'];
+      var dockIdx = 0;
+
+      // Top-right "Dark mode" button — drives SDT directly via setTheme() and
+      // also flips html.dark so any host-page styles tied to it follow. Driving
+      // SDT explicitly means the toggle works even if a previous session
+      // persisted a pinned theme to localStorage.
+      document.addEventListener('DOMContentLoaded', function () {
+        var btn = document.getElementById('toggle-dark-btn');
+        if (!btn) return;
+        function applyDark(isDark) {
+          document.documentElement.classList.toggle('dark', isDark);
+          var sdt = window.seguruDebugToolbar;
+          if (sdt) sdt.setTheme(isDark ? 'dark' : 'light');
+          btn.textContent = isDark ? 'Light mode' : 'Dark mode';
+        }
+        btn.addEventListener('click', function () {
+          applyDark(!document.documentElement.classList.contains('dark'));
+        });
+      });
+
+      function log(msg) {
+        var pane = document.getElementById('event-log');
+        if (!pane) return;
+        var line = document.createElement('div');
+        line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+        pane.appendChild(line);
+        pane.scrollTop = pane.scrollHeight;
+      }
+
+      // Bind action buttons
+      document.addEventListener('click', function (e) {
+        var btn = e.target.closest && e.target.closest('.demo-btn');
+        if (!btn) return;
+        var sdt = window.seguruDebugToolbar;
+        if (!sdt) { log('SDT not ready'); return; }
+        var act = btn.getAttribute('data-act');
+        switch (act) {
+          case 'hide':         sdt.hide(); break;
+          case 'show':         sdt.show(); break;
+          case 'toggle':       sdt.toggle(); break;
+          case 'theme-light':  sdt.setTheme('light'); log('theme: ' + sdt.getTheme()); break;
+          case 'theme-dark':   sdt.setTheme('dark');  log('theme: ' + sdt.getTheme()); break;
+          case 'theme-auto':   sdt.setTheme('auto');  log('theme: ' + sdt.getTheme()); break;
+          case 'user-set':     sdt.setUser({ name: 'Jane Reviewer', role: 'reviewer', id: 'jr' }); break;
+          case 'user-clear':   sdt.setUser(null); break;
+          case 'dock-cycle':
+            dockIdx = (dockIdx + 1) % DOCKS.length;
+            sdt.setDock(DOCKS[dockIdx]);
+            log('dock: ' + DOCKS[dockIdx]);
+            break;
+          case 'hotkey-z':
+            sdt.setHotkey('Z');
+            log('hotkey rebound to Z');
+            break;
+        }
+      });
+
+      // Event log — captures every public sdt:* event
+      ['ready', 'show', 'hide', 'theme-change', 'user-change', 'dataref-click', 'dataref-hover'].forEach(function (name) {
+        window.addEventListener('sdt:' + name, function (e) {
+          var detail = e.detail || {};
+          var summary;
+          if (name === 'dataref-click' || name === 'dataref-hover') {
+            summary = name + ' → ' + detail.dataRef;
+          } else if (name === 'theme-change') {
+            summary = name + ' → ' + detail.theme + ' (mode=' + detail.mode + ')';
+          } else if (name === 'user-change') {
+            summary = name + ' → ' + (detail.user ? detail.user.name : 'null');
+          } else {
+            summary = name;
+          }
+          log(summary);
+        });
+      });
+    })();
+  </script>
 </body>
 </html>

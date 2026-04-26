@@ -3,6 +3,9 @@ node_modules/
 *.log
 .wp-build-tmp/
 
+# Playwright MCP session artifacts (snapshots + console logs)
+.playwright-mcp/
+
 # Internal planning docs — not for public repo
 docs/endpoint-feedback/
 docs/_internal/

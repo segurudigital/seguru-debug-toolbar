@@ -58,15 +58,19 @@ Seguru Debug Toolbar is a lightweight developer tool that turns `data-ref` attri
 
 **Key features:**
 
-* Press **L** to cycle between modes
-* Press **H** to hide the toolbar and all labels for screenshots
-* Press **D** to cycle auto-ref depth between Sections, Blocks, and Elements
+* Press **L** to cycle label modes
+* Press **T** to cycle auto-ref Target depth between Sections, Blocks, and Elements
+* Press **O** to cycle Outline guides
+* Press **D** to show / hide the toolbar (visibility hotkey is configurable)
+* Press **Esc** to dismiss everything in one keystroke
 * Toggle the **Tree** panel to browse all labeled elements in document order
 * Click any label to copy the section code to your clipboard
-* Configurable position (any corner of the screen)
+* Configurable position (any corner of the screen, plus auto-pick)
 * Role-based access control (Administrator, Editor, or Author)
-* Dark mode support
+* Light / Dark / Auto theme system (follows OS or pin explicitly)
 * Adaptive label contrast on dark backgrounds
+* Public events bus (`sdt:show`, `sdt:hide`, `sdt:dataref-click`, etc.) for integrating with custom review or feedback panels
+* Optional identity pill in the toolbar chrome (`setUser()`) so reviewers see their context
 * Zero external dependencies — one self-contained JavaScript file
 * Built-in help docs on the settings page
 
@@ -106,7 +110,7 @@ Yes. Add `data-ref` attributes to Group block wrappers via custom block attribut
 
 = Does it affect site performance? =
 
-No. The entire plugin is a single ~42 KB minified JavaScript file that only loads for authorized logged-in users. It does one DOM scan, injects lightweight label elements, and uses CSS class toggles for mode switching.
+No. The entire plugin is a single ~52 KB minified JavaScript file that only loads for authorized logged-in users. It does one DOM scan, injects lightweight label elements, and uses CSS class toggles for mode switching.
 
 == Screenshots ==
 
@@ -117,6 +121,14 @@ No. The entire plugin is a single ~42 KB minified JavaScript file that only load
 5. Dark-background page with adaptive label contrast
 
 == Changelog ==
+
+= 2.3.0 =
+* Public-API surface for SDT: `hide()` / `show()` / `toggle()`, configurable visibility hotkey, three-mode theme system (`auto` / `light` / `dark`), public `sdt:*` event bus, identity hook (`setUser()`), and configurable dock corner with `auto` heuristic.
+* **Breaking — keymap:** default visibility hotkey changed from H to **D**. **T** now cycles Target depth (was D). **O** is a new fixed binding that cycles Outline. **Esc** is a global one-shot hide.
+* **Breaking — Depth → Target:** the on-page dropdown is now labelled "Target". The public API methods `setDepth()` / `getDepth()` keep their names so existing scripts don't break.
+* Auto-ref defaults to ON for non-WordPress consumers. **The WordPress plugin keeps `Enable auto-ref` off by default** — admins opt in via Settings → Debug Toolbar to avoid surprising perf cost on large pages.
+* User-pill avatar uses neutral slate so the Seguru S badge stays the only blue mark in the chrome. S badge bumped 16 → 20px and centered symmetrically in its click target.
+* WP self-update keeps working — installs on 2.2.x will see the 2.3.0 update notice automatically.
 
 = 2.2.3 =
 * Fixed: manual `workflow_dispatch` retries now resolve the requested tag in the npm publish job, so re-running `release-assets.yml` checks out the correct ref before publish.

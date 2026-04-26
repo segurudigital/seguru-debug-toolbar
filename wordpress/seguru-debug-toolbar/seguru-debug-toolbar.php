@@ -3,7 +3,7 @@
  * Plugin Name:  Seguru Debug Toolbar
  * Plugin URI:   https://github.com/segurudigital/seguru-debug-toolbar
  * Description:  Visual overlay for data-ref element labels. Shows section references on the front end for admins — useful for QA, revision feedback, and bug reporting.
- * Version:      2.2.3
+ * Version:      2.3.0
  * Author:       Seguru Digital
  * Author URI:   https://seguru.digital
  * License:      MIT
@@ -19,7 +19,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 // ── Constants ─────────────────────────────────────────────────
-define( 'SDT_VERSION', '2.2.3' );
+define( 'SDT_VERSION', '2.3.0' );
 define( 'SDT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SDT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'SDT_OPTION_GROUP', 'sdt_settings' );
@@ -379,12 +379,13 @@ function sdt_render_settings_page() {
                     <div class="sdt-field" style="margin-top: 16px;">
                         <label>
                             <input type="checkbox" name="sdt_start_hidden" value="1" <?php checked( $start_hidden, '1' ); ?>>
-                            Start hidden (press <kbd>H</kbd> to reveal)
+                            Start hidden (press <kbd>D</kbd> to reveal)
                         </label>
                         <p class="sdt-desc">
-                            Recommended. The toolbar loads but stays out of the way until you press <kbd>H</kbd> —
+                            Recommended. The toolbar loads but stays out of the way until you press <kbd>D</kbd> —
                             keeps screenshots, Chrome debug captures, AI-agent browsing sessions, and client demos clean by default.
                             Turn off if you'd rather the toolbar appear on every page load.
+                            (The visibility hotkey is configurable — <kbd>D</kbd> is just the default.)
                         </p>
                     </div>
 
@@ -463,7 +464,7 @@ function sdt_render_settings_page() {
                             Automatically generates <code>data-ref</code> values based on the page slug and position.
                             Detects Elementor, Bricks, Oxygen, Breakdance, and standard HTML elements.
                             Elements that already have a <code>data-ref</code> (manual or from the class converter) keep their value.
-                            Use the <strong>Depth</strong> dropdown on the front-end toolbar (or press <kbd>D</kbd>) to switch between Sections, Blocks, and Elements.
+                            Use the <strong>Target</strong> dropdown on the front-end toolbar (or press <kbd>T</kbd>) to switch between Sections, Blocks, and Elements.
                         </p>
                     </div>
                 </div>
@@ -475,8 +476,15 @@ function sdt_render_settings_page() {
                 <div class="sdt-card__body">
                     <div class="sdt-help-grid">
                         <div class="sdt-help-item">
-                            <h3>Switch modes</h3>
-                            <p>Press <kbd>L</kbd> on your keyboard to cycle between Icons, Off, and Full modes. Or click the mode buttons on the toolbar bar in the corner of the page.</p>
+                            <h3>Keyboard shortcuts</h3>
+                            <p>
+                                <kbd>L</kbd> cycles label modes (Icons / Off / Full).
+                                <kbd>T</kbd> cycles Target depth (Off / Sections / Blocks / Elements).
+                                <kbd>O</kbd> cycles Outline guides.
+                                <kbd>D</kbd> shows / hides the toolbar.
+                                <kbd>Esc</kbd> dismisses everything.
+                                Shortcuts pause when typing in form fields.
+                            </p>
                         </div>
                         <div class="sdt-help-item">
                             <h3>Copy a section reference</h3>
