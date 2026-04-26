@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Seguru Debug Toolbar (mu-plugin)
  * Description: Visual overlay for data-ref element labels. Lightweight mu-plugin drop-in.
- * Version:     2.2.3
+ * Version:     2.3.0
  * Author:      Seguru Digital
  * Author URI:  https://seguru.digital
  *
@@ -12,7 +12,8 @@
  * This mu-plugin reads the same options as the installable plugin version,
  * so both share the same Settings → Debug Toolbar page if present.
  * If no settings exist yet, it defaults to: enabled=off, mode=full,
- * start_hidden=on (press H to reveal), position=bottom-right, role=administrator.
+ * start_hidden=on (press D to reveal — visibility hotkey is configurable),
+ * position=bottom-right, role=administrator.
  *
  * Enable via WP-CLI:  wp option update sdt_enabled 1
  */

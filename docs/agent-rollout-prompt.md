@@ -171,20 +171,23 @@ Drop the minified file into `assets/` and add to `layout/theme.liquid`:
 {% endif %}
 ```
 
-## Default behaviour (as of v2.2.0)
+## Default behaviour (as of v2.3.0)
 
-On page load the toolbar is **hidden** — the script runs, labels are prepared, but nothing is visible. Press **H** to reveal the toolbar + labels. This keeps screenshots, Chrome debug captures, AI-agent browsing sessions, and client demos clean by default.
+On page load the toolbar is **hidden** — the script runs, labels are prepared, but nothing is visible. Press **D** to reveal the toolbar + labels. This keeps screenshots, Chrome debug captures, AI-agent browsing sessions, and client demos clean by default. (The visibility hotkey is configurable via `setHotkey()` / `init({ hotkey })` / `data-hotkey="…"`. Pre-2.3 builds used `H` as the default.)
 
 When revealed, default settings are:
-- **Labels mode:** Full (every `data-ref` shows its value as a persistent label)
-- **Depth:** Elements (densest auto-ref scan)
+- **Labels:** Full (every `data-ref` shows its value as a persistent label)
+- **Target:** Elements (densest auto-ref scan; "Target" is the v2.3 rename of "Depth", the JS API still uses `setDepth()` / `getDepth()`)
 - **Outline:** Off
+- **Theme:** Auto (follows OS `prefers-color-scheme` plus the host's `html.dark` class)
+- **Dock:** Bottom-right
 
-Keyboard shortcuts (skipped when focus is in input/textarea/select/contenteditable):
-- **H** — toggle presentation mode (hide/show everything)
+Keyboard shortcuts (all ignored when focus is in input/textarea/select/contenteditable, and ignored when modifier keys are held):
+- **D** — show / hide the toolbar (configurable visibility hotkey)
 - **L** — cycle label modes: Off → Icons → Full
-- **D** — cycle depth: Off → Sections → Blocks → Elements
-- **Esc** — close any open toolbar dropdown
+- **T** — cycle Target depth: Off → Sections → Blocks → Elements
+- **O** — cycle Outline guides: Off → Sections → Blocks
+- **Esc** — global one-shot hide (closes any open dropdown, the Tree panel, and the toolbar in a single press)
 
 Clicking any label copies the `data-ref` value to clipboard. A green toast confirms the copy.
 
@@ -199,7 +202,11 @@ If a specific page needs different defaults (e.g. the toolbar visible on load fo
     defaultMode: 2,           // 0=Icons, 1=Off, 2=Full
     autoRefDepth: 'element',  // 'off' | 'section' | 'block' | 'element'
     outlineMode: 'off',       // 'off' | 'section' | 'block'
-    position: 'bottom-right', // bottom-right | bottom-left | top-right | top-left
+    autoRef: false,           // default true (auto-ref ON) — set false to disable
+    hotkey: 'V',              // default 'D' — single letter A-Z, or false to disable
+    theme: 'auto',            // 'auto' | 'light' | 'dark'
+    dock: 'bottom-right',     // bottom-right | bottom-left | top-right | top-left | auto
+    user: { name: 'Reviewer', role: 'qa' }   // optional identity pill
   };
 </script>
 <script src="seguru-debug-toolbar.min.js" defer></script>
@@ -208,11 +215,18 @@ If a specific page needs different defaults (e.g. the toolbar visible on load fo
 ## JavaScript API
 
 ```js
-window.seguruDebugToolbar.setState(0|1|2);                        // mode
-window.seguruDebugToolbar.setDepth('off'|'section'|'block'|'element');
+window.seguruDebugToolbar.setState(0|1|2);                              // label mode
+window.seguruDebugToolbar.setDepth('off'|'section'|'block'|'element');  // Target
 window.seguruDebugToolbar.setOutline('off'|'section'|'block');
+window.seguruDebugToolbar.hide(); window.seguruDebugToolbar.show(); window.seguruDebugToolbar.toggle();
+window.seguruDebugToolbar.setHotkey('D'|false);
+window.seguruDebugToolbar.setTheme('auto'|'light'|'dark');
+window.seguruDebugToolbar.setDock('bottom-right'|'bottom-left'|'top-right'|'top-left'|'auto');
+window.seguruDebugToolbar.setUser({ name, role, id, email }|null);
 window.seguruDebugToolbar.refresh();  // rescan DOM after SPA navigation or async content
 ```
+
+A `sdt:*` event bus on `window` reports lifecycle, theme, and `dataref-click` interactions for review-tool integrations — see the README "Events" section.
 
 Call `refresh()` after route changes, after `fetch()`-loaded content mounts, and after any DOM mutation that injects new `data-ref` elements.
 

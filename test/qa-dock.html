@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SDT QA — dock corners</title>
+</head>
+<body style="font-family:system-ui;padding:40px;min-height:100vh;background:#F9FAFB;">
+  <h1>Dock corner test</h1>
+  <p>Boots with <code>dock</code> read from <code>?dock=&lt;value&gt;</code> query param. Use <code>?dock=bottom-right|bottom-left|top-right|top-left|auto</code> to verify each corner positions correctly.</p>
+
+  <section data-ref="qa-01-section-a"><h2>Section A</h2></section>
+
+  <script>
+    var params = new URLSearchParams(window.location.search);
+    var dock = params.get('dock') || 'bottom-right';
+    window.seguruDebugConfig = {
+      dock: dock,
+      startHidden: false
+    };
+    window.QA = { dockRequested: dock, dockResolved: null, ready: false };
+    window.addEventListener('sdt:ready', function () {
+      window.QA.ready = true;
+      window.QA.dockResolved = window.seguruDebugToolbar.getDock();
+    });
+  </script>
+  <script src="../src/seguru-debug-toolbar.js"></script>
+</body>
+</html>

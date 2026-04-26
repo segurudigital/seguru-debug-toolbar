@@ -50,7 +50,7 @@ A persistent text label appears at the top-left of every `data-ref` element, sho
 
 ## Presentation mode
 
-The toolbar loads in **presentation mode by default** — the script runs, labels are prepared in the DOM, but nothing is visible. Press **H** to reveal the toolbar and labels. Press **H** again to hide them.
+The toolbar loads in **presentation mode by default** — the script runs, labels are prepared in the DOM, but nothing is visible. Press **D** to reveal the toolbar and labels. Press **D** again to hide them. (The visibility hotkey is [configurable](../README.md#keyboard) — `D` is just the default; pre-2.3 builds used `H`.)
 
 This default keeps screenshots, Chrome debug captures (including AI-agent browsing sessions), and client demos clean without any extra step. Anyone who wants the toolbar can bring it up with one keypress.
 
@@ -60,9 +60,9 @@ Presentation mode is separate from the Off label mode — Off hides labels but k
 
 ---
 
-## Depth control
+## Target control
 
-The **Depth** dropdown controls what gets auto-labelled. Click it to select a level, or press **D** to cycle through them. The default is **Elements** — the densest view, useful for full-coverage QA and for AI agents reading the page to generate feedback against every meaningful element.
+The **Target** dropdown controls what gets auto-labelled. Click it to select a level, or press **T** to cycle through them. The default is **Elements** — the densest view, useful for full-coverage QA and for AI agents reading the page to generate feedback against every meaningful element. (Pre-2.3 builds called this "Depth" and bound it to `D`; the public API methods `setDepth()` / `getDepth()` keep their names for back-compat.)
 
 ### Off
 
@@ -86,7 +86,7 @@ Auto-generated ref names include element context: `home-03-heading` for an Eleme
 
 ## Outline guides
 
-The **Outline** dropdown adds guide outlines to help you inspect section boundaries, overlapping wrappers, and spacing relationships without turning on dense labels everywhere.
+The **Outline** dropdown adds guide outlines to help you inspect section boundaries, overlapping wrappers, and spacing relationships without turning on dense labels everywhere. Click it to select a mode, or press **O** to cycle through them.
 
 ### Off
 

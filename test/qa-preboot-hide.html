@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SDT QA — pre-boot hide()</title>
+</head>
+<body style="font-family:system-ui;padding:40px;">
+  <h1>Pre-boot hide() test</h1>
+  <p>This page sets <code>seguruDebugConfig.startHidden = false</code> so SDT would normally boot visible. Then it stubs the API early and queues a <code>hide()</code> call BEFORE the SDT script tag loads. After SDT boots, the toolbar should be hidden — proving pre-boot calls survive the boot.</p>
+
+  <section data-ref="qa-01-section-a"><h2>Section A</h2></section>
+  <section data-ref="qa-02-section-b"><h2>Section B</h2></section>
+
+  <div id="qa-log" style="margin-top:24px;font-family:ui-monospace,monospace;font-size:12px;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:4px;padding:8px;"></div>
+
+  <script>
+    // Force SDT to default to visible — the explicit pre-boot hide() should win.
+    window.seguruDebugConfig = { startHidden: false };
+
+    // Capture state across the boot for QA inspection.
+    window.QA = {
+      preBootApiPresent: false,
+      preBootHideCalled: false,
+      readyFired: false,
+      visibleAtReady: null,
+      hostDisplayAtReady: null
+    };
+
+    function log(msg) {
+      var el = document.getElementById('qa-log');
+      if (!el) return;
+      var line = document.createElement('div');
+      line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+      el.appendChild(line);
+    }
+
+    window.addEventListener('sdt:ready', function (e) {
+      window.QA.readyFired = true;
+      window.QA.visibleAtReady = window.seguruDebugToolbar.isVisible();
+      var host = document.getElementById('seguru-debug-toolbar-host');
+      window.QA.hostDisplayAtReady = host ? host.style.display : '(no host)';
+      log('sdt:ready fired — isVisible=' + window.QA.visibleAtReady + ' host.display=' + window.QA.hostDisplayAtReady);
+    });
+  </script>
+
+  <!--
+    Inject SDT, then immediately call hide() right after the IIFE runs but BEFORE
+    DOMContentLoaded fires init(). The script's IIFE assigns
+    window.seguruDebugToolbar synchronously, so we can call it on the next line.
+    The init() runs on DOMContentLoaded later — the hide() should be applied then.
+  -->
+  <script src="../src/seguru-debug-toolbar.js"></script>
+  <script>
+    if (window.seguruDebugToolbar) {
+      window.QA.preBootApiPresent = true;
+      window.seguruDebugToolbar.hide();
+      window.QA.preBootHideCalled = true;
+    }
+  </script>
+</body>
+</html>

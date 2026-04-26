@@ -1,6 +1,6 @@
 # Seguru Debug Toolbar — Agent Context
 
-**Version:** 2.2.3
+**Version:** 2.3.0
 **Repo:** https://github.com/segurudigital/seguru-debug-toolbar
 **Maintained by:** Seguru Digital (hello@seguru.digital)
 **License:** MIT
@@ -58,17 +58,40 @@ test/
 ### Start
 1. `git pull origin main`
 2. Read this file (AGENTS.md)
-3. Read TASKS.md (current sprint + handoff notes)
-4. Check ROADMAP.md for upcoming scope
-5. Verify: `git log --oneline -5 && git status`
+3. Read **TASKS.md** — the canonical list of all open work for this sprint
+4. Read **ROADMAP.md** — upcoming scope and what's next after this sprint
+5. Read **CHANGELOG.md** — what shipped in the last release (so handoff makes sense)
+6. Verify: `git log --oneline -5 && git status`
+
+All three of TASKS.md, ROADMAP.md, and CHANGELOG.md must be in sync at the start and end of every session. If they conflict (e.g. TASKS.md says a feature is open but CHANGELOG already shipped it), reconcile before doing any other work.
+
+### During the session
+
+- TASKS.md is the **single source of truth for open work**. Use the agent's own todo tracker (e.g. `TodoWrite`) only as a session-scoped mirror of TASKS.md — do not introduce work that isn't reflected in TASKS.md.
+- Tick checkboxes in TASKS.md as work completes. Don't batch — tick each item the moment it's done so an interrupted session can resume cleanly.
+- If new work is discovered mid-session, add it to TASKS.md under the current sprint (or a new sprint section if it doesn't belong) and tick off as it's done.
 
 ### End
-1. Update TASKS.md (check off completed, write new handoff notes)
-2. Update CHANGELOG.md if anything shipped
-3. Bump version in all locations below if releasing
-4. `npm run build` to regenerate dist
-5. Commit with conventional message
-6. Push
+1. **TASKS.md** — confirm everything ticked is actually shipped; move done items to "What was done (session N)" handoff notes; carry remaining open items forward
+2. **CHANGELOG.md** — for everything ticked off in TASKS.md this session, add an entry under `[Unreleased]` (or under the version heading if cutting a release). The CHANGELOG is the user-facing record of what shipped; TASKS.md is the internal record of the work that produced it
+3. **ROADMAP.md** — if a future-scope item moved into a sprint or is now complete, update ROADMAP accordingly so it stays accurate as a forward view
+4. Bump version in all locations below if releasing
+5. `npm run build` to regenerate dist
+6. Commit with conventional message
+7. Push
+
+---
+
+## File responsibilities (in sync, always)
+
+| File | Responsibility | Lifecycle |
+|------|----------------|-----------|
+| `TASKS.md` | Canonical list of all open and recently completed work, organised as **Sprints → Phases → subtasks**. Source of truth for "what's in flight." | Updated continuously during a session. Items are checked off as work completes. |
+| `CHANGELOG.md` | User-facing record of what shipped in each release. Items move here from TASKS.md once they're done and either committed or released. | Updated at session end (or release time) once TASKS.md items have been verified shipped. |
+| `ROADMAP.md` | Forward-looking record of upcoming scope, themes, and intentions. Not a commitment list — a directional one. | Updated when a future item gets pulled into a sprint, or when scope shifts. |
+| Agent task tracker (e.g. `TodoWrite`) | Session-scoped working memory that mirrors TASKS.md for the agent's own progress tracking. Never the source of truth on its own. | Created at session start, discarded at session end. |
+
+If TASKS.md doesn't have what you're working on, **add it before doing the work** — don't track it only in the session todos. The TASKS.md entry survives the session; the todos do not.
 
 ---
 
@@ -176,16 +199,20 @@ Never `git add .` — stage specific files only.
 
 ## Key behaviours to preserve
 
-- **L key** cycles modes: Off → Icons → Full
-- **D key** cycles depth: Off → Sections → Blocks → Elements
-- **H key** toggles presentation mode (hides toolbar + all labels)
-- **Escape** closes open dropdowns
+- **L key** cycles Labels: Off → Icons → Full
+- **T key** cycles Target depth: Off → Sections → Blocks → Elements (renamed from D in v2.3.0)
+- **O key** cycles Outline: Off → Sections → Blocks (new in v2.3.0)
+- **D key** (default visibility hotkey, configurable via `setHotkey()`) toggles the toolbar — was `H` pre-2.3.0
+- **Escape** is a global one-shot hide — closes any open dropdown, the Tree panel, and dismisses the toolbar in one press
+- All keys ignore typing targets (`<input>`, `<textarea>`, `<select>`, contenteditable) and modifier-key combos
 - **Click any label** → copies `data-ref` value to clipboard
 - **Toast** confirms copy, stays 1800ms
 - **`refresh()`** re-runs converters + label injection + tree rebuild
 - **`clearAutoRefs()`** removes auto-generated refs (called on depth change)
 - **`_sdtLabelled` marker** prevents double-injection on refresh
 - **Luminance detection** applies `sdt-on-dark` class to labels on dark backgrounds
+- **Auto-ref defaults ON in v2.3.0** — Target boots at Elements unless `seguruDebugConfig.autoRef = false`. Pre-2.3.x had auto-ref opt-in.
+- **Default visibility hotkey changed to `D`** in v2.3.0 — was `H`. Configurable via `setHotkey()` / `data-hotkey` / `init({ hotkey })`.
 
 ---
 

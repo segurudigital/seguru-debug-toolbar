@@ -36,6 +36,12 @@
 (function () {
   'use strict';
 
+  // ─── Version ────────────────────────────────────────────────
+  // Single source of truth for the bundled version string. Exposed via
+  // `seguruDebugToolbar.version` and emitted in the `sdt:ready` event detail.
+  // Kept in sync with package.json on release.
+  var SDT_VERSION = '2.3.0';
+
   // ─── Configuration ──────────────────────────────────────────
   var ACCENT = '234, 88, 12';        // orange — functional UI accent
   var ACCENT_ON_DARK = '249, 115, 22';
@@ -46,8 +52,9 @@
   var FONT_UI = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
   // Seguru S mark — inline SVG derived from Seguru-Favicon-Blue.svg
-  // 16px circle, blue bg, white mark. Used in the toolbar badge zone.
-  var S_MARK_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="16" height="16" style="display:block">' +
+  // 20px circle, blue bg, white mark. Slightly larger than the 18px user-pill
+  // avatar so the brand anchor reads as primary, identity as secondary.
+  var S_MARK_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="20" height="20" style="display:block">' +
     '<circle cx="256" cy="256" r="256" fill="' + SEGURU_BLUE + '"/>' +
     '<path fill="#fff" d="M328.35,158.25c0,39.96-32.39,72.35-72.35,72.35s-72.35-32.39-72.35-72.35,32.39-72.35,72.35-72.35,72.35,32.39,72.35,72.35M141.19,624.36h0v520.12c0,69.87,30.78,120.8,92.17,128.41v63.09h44.33v-63.09c61.39-7.61,92.17-58.54,92.17-128.41V480.38c0-50.17-16.33-91-46.67-112,14-17.5,29.17-31.49,29.17-57.78,0-17.25-4.37-38.67-26.63-58.37,28.72-21.35,47.41-55.43,47.41-93.97,0-64.7-52.45-117.15-117.15-117.15s-117.15,52.45-117.15,117.15,52.45,117.15,117.15,117.15c8.86,0,17.46-1.07,25.75-2.93,12.7,9.57,20.26,21.05,21.32,31.55,2.55,25.37-19.72,42.73-59.21,83.02-59.5,61.84-77,81.67-87.5,109.67-11.67,28-15.17,65.33-15.17,112v15.65h0Z M185.52,1105.92h0v-513.54c0-77,23.33-102.67,88.67-171.51,4.67-5.83,10.5-11.67,17.5-18.67,25.67,15.17,33.83,50.17,33.83,110.84v598.76c0,81.67-14,117.84-70,117.84s-70-36.17-70-117.84v-5.88h0Z"/>' +
     '</svg>';
@@ -101,18 +108,36 @@
     return matcher.call(el, selector);
   }
 
-  // ─── Config merge: wpConfig (PHP-injected) + sdtConfig (per-page override)
+  // ─── Config merge: wpConfig (PHP-injected) + sdtConfig (per-page override) + script[data-*]
   // wpConfig is set by WordPress via wp_localize_script under the key 'sdtConfig'.
   // sdtConfig is a per-page override set directly on window (e.g. in wireframes).
+  // The host script tag may also carry data-hotkey / data-theme / data-dock attributes.
   // Page-level sdtConfig overrides wpConfig; both fall back to defaults.
   var wpConfig = (typeof window.sdtConfig !== 'undefined') ? window.sdtConfig : {};
   var pageConfig = (typeof window.seguruDebugConfig !== 'undefined') ? window.seguruDebugConfig : {};
-  // Merge: pageConfig values win over wpConfig values
+
+  // Capture the host <script> element (only valid during initial sync execution).
+  var hostScriptEl = document.currentScript || null;
+  function readScriptAttr(name) {
+    if (!hostScriptEl) return undefined;
+    var v = hostScriptEl.getAttribute(name);
+    return v === null ? undefined : v;
+  }
+  var scriptConfig = {
+    hotkey: readScriptAttr('data-hotkey'),
+    theme: readScriptAttr('data-theme'),
+    dock: readScriptAttr('data-dock'),
+    position: readScriptAttr('data-position')
+  };
+
+  // Merge: pageConfig > wpConfig > scriptConfig
   var config = {};
-  var _keys = ['defaultMode', 'classConverter', 'autoRef', 'autoRefDepth', 'outlineMode', 'position', 'pageSlug', 'startHidden'];
+  var _keys = ['defaultMode', 'classConverter', 'autoRef', 'autoRefDepth', 'outlineMode', 'position', 'pageSlug', 'startHidden', 'hotkey', 'theme', 'dock', 'user'];
   for (var _i = 0; _i < _keys.length; _i++) {
     var _k = _keys[_i];
-    config[_k] = (_k in pageConfig) ? pageConfig[_k] : wpConfig[_k];
+    if (_k in pageConfig) config[_k] = pageConfig[_k];
+    else if (_k in wpConfig) config[_k] = wpConfig[_k];
+    else if (_k in scriptConfig && typeof scriptConfig[_k] !== 'undefined') config[_k] = scriptConfig[_k];
   }
 
   // 0=icons, 1=off, 2=full. Default 2 (Full) when no config provided.
@@ -121,18 +146,87 @@
 
   // Feature flags
   var classConverterEnabled = config.classConverter === '1' || config.classConverter === true;
-  var autoRefEnabled = config.autoRef === '1' || config.autoRef === true;
+  // Auto-ref is now ON by default — Target boots at Elements so every meaningful
+  // element on the page is labelled without manual tagging. Pre-2.3 builds had
+  // auto-ref opt-in (`autoRef: true` to enable). Existing hosts that want the
+  // old behaviour can set `seguruDebugConfig.autoRef = false` (or `'0'`).
+  var autoRefEnabled = !(config.autoRef === '0' || config.autoRef === false);
   var autoRefDepth = config.autoRefDepth || 'element'; // section | block | element (default element)
   var outlineMode = config.outlineMode || 'off'; // off | section | block
 
-  // Presentation mode — H key toggles toolbar + label visibility.
+  // Presentation mode — visibility hotkey toggles toolbar + label visibility.
   // Default ON so the toolbar stays out of screenshots, Chrome debug sessions
   // (e.g. captured by AI agents), and client demos until explicitly revealed.
   // Set seguruDebugConfig.startHidden = false to restore legacy "visible on load" behaviour.
   var presentationMode = !(config.startHidden === '0' || config.startHidden === false);
 
+  // ─── Hotkey config ─────────────────────────────────────────
+  // Single letter (case-insensitive) toggles visibility. `false` disables binding.
+  // Default 'D' (for "Debug"). Esc is bound unconditionally as a global hide —
+  // it closes any open dropdown, the Tree panel, and the toolbar in one press.
+  // T (cycle Target) and O (cycle Outline) are fixed and not configurable.
+  function normalizeHotkey(value) {
+    if (value === false || value === 'false' || value === null) return false;
+    if (typeof value === 'undefined' || value === '') return 'D';
+    if (typeof value === 'string') {
+      var trimmed = value.trim();
+      if (!trimmed) return 'D';
+      var ch = trimmed.charAt(0).toUpperCase();
+      if (/^[A-Z]$/.test(ch)) return ch;
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[seguru-debug-toolbar] hotkey must be a single letter A–Z, got', value, '— falling back to D');
+      }
+      return 'D';
+    }
+    return 'D';
+  }
+  var hotkey = normalizeHotkey(config.hotkey);
+
+  // ─── Theme config ──────────────────────────────────────────
+  // 'auto' (default) follows prefers-color-scheme + the host's `html.dark` class.
+  // 'light' / 'dark' pin explicitly. Persisted under THEME_STORAGE_KEY.
+  var THEME_STORAGE_KEY = 'seguru-debug-toolbar:theme';
+  function readPersistedTheme() {
+    try {
+      var stored = window.localStorage && window.localStorage.getItem(THEME_STORAGE_KEY);
+      if (stored === 'light' || stored === 'dark' || stored === 'auto') return stored;
+    } catch (e) { /* localStorage may be blocked */ }
+    return null;
+  }
+  function persistTheme(value) {
+    try {
+      if (window.localStorage) window.localStorage.setItem(THEME_STORAGE_KEY, value);
+    } catch (e) { /* swallow */ }
+  }
+  var theme = (function () {
+    var raw = config.theme;
+    if (raw === 'light' || raw === 'dark' || raw === 'auto') return raw;
+    var persisted = readPersistedTheme();
+    return persisted || 'auto';
+  })();
+  var resolvedTheme = 'light'; // computed at applyTheme()
+  var darkMediaQuery = null;
+
+  // ─── Identity ──────────────────────────────────────────────
+  // currentUser holds a snapshot of the documented public fields only.
+  // snapshotUser() is a function declaration further down the file and is
+  // hoisted, so calling it here at module init is safe.
+  var currentUser = snapshotUser(config.user);
+
   // ─── Position config ────────────────────────────────────────
-  var position = config.position || 'bottom-right';
+  // `dock` is the canonical name; `position` is the legacy alias kept for back-compat.
+  // 'auto' is resolved at runtime (after the DOM exists) — at module init it
+  // becomes a placeholder that init() resolves before applyDockPosition() runs.
+  var DOCK_VALUES = { 'bottom-right': 1, 'bottom-left': 1, 'top-right': 1, 'top-left': 1 };
+  function normalizeDock(value) {
+    if (typeof value !== 'string') return null;
+    var lower = value.toLowerCase();
+    return DOCK_VALUES[lower] ? lower : null;
+  }
+  var _initialDock = (typeof config.dock === 'string' && config.dock.toLowerCase() === 'auto')
+    ? 'auto'
+    : (normalizeDock(config.dock) || normalizeDock(config.position));
+  var position = _initialDock === 'auto' ? 'bottom-right' : (_initialDock || 'bottom-right');
   var posMap = {
     'bottom-right': 'bottom:20px;right:20px;',
     'bottom-left':  'bottom:20px;left:20px;right:auto;',
@@ -597,7 +691,8 @@
     '  box-sizing: border-box;',
     '  display: flex;',
     '  align-items: center;',
-    '  padding: 0 8px 0 4px;',
+    '  justify-content: center;',
+    '  padding: 0 6px;',
     '  cursor: pointer;',
     '  position: relative;',
     '  border-radius: 999px;',
@@ -634,6 +729,82 @@
     '  transform: translateX(-50%) translateY(0);',
     '}',
 
+    // --- User pill (host-supplied identity) ---
+    // Sits between the badge and the primary cluster. Avatar uses Seguru blue
+    // so it pairs with the badge instead of competing with the orange UI accent
+    // on active controls. A subtle left divider separates the pill from the
+    // badge when both are present.
+    '.sdt-toolbar__user {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: none;',
+    '  align-items: center;',
+    '  gap: 6px;',
+    '  padding: 4px 9px 4px 8px;',
+    '  margin-left: 2px;',
+    '  margin-right: 2px;',
+    '  border-left: 1px solid #E5E7EB;',
+    '  background: #F9FAFB;',
+    '  border-top: 1px solid #E5E7EB;',
+    '  border-right: 1px solid #E5E7EB;',
+    '  border-bottom: 1px solid #E5E7EB;',
+    '  border-radius: 999px;',
+    '  font-family: ' + FONT_UI + ';',
+    '  font-size: 0.6875rem;',
+    '  font-weight: 500;',
+    '  color: #374151;',
+    '  white-space: nowrap;',
+    '  line-height: 1.4;',
+    '  max-width: 200px;',
+    '  overflow: hidden;',
+    '  text-overflow: ellipsis;',
+    '}',
+
+    '.sdt-toolbar__user--visible { display: inline-flex; }',
+
+    // Avatar uses a neutral dark slate so it reads as identity, not brand —
+    // Seguru blue (`#00C0F3`) is reserved for the S mark badge to keep the
+    // brand anchor unique. Pure orange (`#EA580C`) is reserved for active
+    // controls. Slate sits cleanly outside both.
+    '.sdt-toolbar__user-avatar {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: inline-flex;',
+    '  align-items: center;',
+    '  justify-content: center;',
+    '  width: 18px;',
+    '  height: 18px;',
+    '  border-radius: 50%;',
+    '  background: #111827;',
+    '  color: #fff;',
+    '  font-family: ' + FONT_UI + ';',
+    '  font-size: 0.625rem;',
+    '  font-weight: 700;',
+    '  flex-shrink: 0;',
+    '  line-height: 1;',
+    '}',
+
+    '.sdt-toolbar__user-name {',
+    '  all: initial;',
+    '  font-family: ' + FONT_UI + ';',
+    '  font-size: 0.6875rem;',
+    '  font-weight: 600;',
+    '  color: #111827;',
+    '  white-space: nowrap;',
+    '  overflow: hidden;',
+    '  text-overflow: ellipsis;',
+    '  max-width: 130px;',
+    '}',
+
+    '.sdt-toolbar__user-role {',
+    '  all: initial;',
+    '  font-family: ' + FONT_UI + ';',
+    '  font-size: 0.625rem;',
+    '  font-weight: 500;',
+    '  color: #9CA3AF;',
+    '  margin-left: 2px;',
+    '}',
+
     // --- Dark mode ---
     ':host-context(html.dark) .sdt-toolbar { background: #27272A; border-color: #3F3F46; }',
     ':host-context(html.dark) .sdt-toolbar__cluster--primary { border-right-color: #3F3F46; }',
@@ -651,6 +822,13 @@
     ':host-context(html.dark) .sdt-toolbar__hint { border-bottom-color: #3F3F46; }',
     ':host-context(html.dark) .sdt-toolbar__badge:hover { background: #3F3F46; }',
     ':host-context(html.dark) .sdt-toolbar__badge-tip { color: #B1B3B6; }',
+    ':host-context(html.dark) .sdt-toolbar__user { background: #313136; border-top-color: #3F3F46; border-right-color: #3F3F46; border-bottom-color: #3F3F46; border-left-color: #3F3F46; color: #D1D5DB; }',
+    // In dark mode the pill background is already a deep slate (#313136), so a
+    // dark navy avatar would disappear into it. Bump to a mid-slate (#71717A,
+    // zinc-500) so the avatar still reads as an inset chip on the dark pill.
+    ':host-context(html.dark) .sdt-toolbar__user-avatar { background: #71717A; color: #fff; }',
+    ':host-context(html.dark) .sdt-toolbar__user-name { color: #F3F4F6; }',
+    ':host-context(html.dark) .sdt-toolbar__user-role { color: #A1A1AA; }',
 
     // --- Toast ---
     '.sdt-toast {',
@@ -937,6 +1115,17 @@
 
   ].join('\n');
 
+  // Mirror every `:host-context(html.dark)` rule with a `:host(.sdt-theme-dark)`
+  // parallel so explicit setTheme('dark') / theme: 'dark' opt-in works without
+  // requiring the host page to add `html.dark`. The original rules are kept so
+  // legacy hosts that already toggle `html.dark` continue to work unchanged.
+  shadowCss = shadowCss.split('\n').map(function (line) {
+    if (line.indexOf(':host-context(html.dark)') !== -1) {
+      return line + '\n' + line.replace(':host-context(html.dark)', ':host(.sdt-theme-dark)');
+    }
+    return line;
+  }).join('\n');
+
 
   // ─── Mode + depth display labels ─────────────────────────────
   var MODE_LABELS = { 0: 'Icons', 1: 'Off', 2: 'Full' };
@@ -956,6 +1145,11 @@
       S_MARK_SVG +
       '<span class="sdt-toolbar__badge-tip">Powered by Seguru Digital</span>' +
     '</a>' +
+    '<div class="sdt-toolbar__user" data-sdt-user-pill role="status">' +
+      '<span class="sdt-toolbar__user-avatar" data-sdt-user-avatar aria-hidden="true"></span>' +
+      '<span class="sdt-toolbar__user-name" data-sdt-user-name></span>' +
+      '<span class="sdt-toolbar__user-role" data-sdt-user-role></span>' +
+    '</div>' +
     '<div class="sdt-toolbar__cluster sdt-toolbar__cluster--primary">' +
       // ── Mode dropdown ──
       '<div class="sdt-toolbar__group sdt-toolbar__group--primary" data-sdt-group="mode">' +
@@ -965,7 +1159,7 @@
           '<span class="sdt-toolbar__caret">&#9662;</span>' +
         '</button>' +
         '<div class="sdt-toolbar__dropdown" data-sdt-menu="mode">' +
-          '<div class="sdt-toolbar__hint">Press L to cycle · H to hide all</div>' +
+          '<div class="sdt-toolbar__hint" data-sdt-mode-hint>Press L to cycle</div>' +
           '<button class="sdt-toolbar__option' + (state === 2 ? ' sdt-toolbar__option--active' : '') + '" data-sdt-state="2">' +
             '<span class="sdt-toolbar__option-dot"></span> Full' +
           '</button>' +
@@ -977,15 +1171,18 @@
           '</button>' +
         '</div>' +
       '</div>' +
-      // ── Depth dropdown ──
+      // ── Target (depth) dropdown ──
+      // The user-facing label is "Target"; internally we still call this
+      // "depth" — public API methods setDepth/getDepth keep their names so
+      // existing consumers don't break.
       '<div class="sdt-toolbar__group sdt-toolbar__group--primary" data-sdt-group="depth">' +
         '<button class="sdt-toolbar__select' + (autoRefEnabled ? ' sdt-toolbar__select--active' : '') + '" data-sdt-toggle="depth">' +
-          '<span class="sdt-toolbar__key">Depth</span>' +
+          '<span class="sdt-toolbar__key">Target</span>' +
           '<span class="sdt-toolbar__value">' + initDepthLabel + '</span>' +
           '<span class="sdt-toolbar__caret">&#9662;</span>' +
         '</button>' +
         '<div class="sdt-toolbar__dropdown" data-sdt-menu="depth">' +
-          '<div class="sdt-toolbar__hint">Press D to cycle</div>' +
+          '<div class="sdt-toolbar__hint">Press T to cycle</div>' +
           '<button class="sdt-toolbar__option' + (autoRefEnabled && autoRefDepth === 'element' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="element">' +
             '<span class="sdt-toolbar__option-dot"></span> Elements — headings, text, images, buttons' +
           '</button>' +
@@ -1010,7 +1207,7 @@
           '<span class="sdt-toolbar__caret">&#9662;</span>' +
         '</button>' +
         '<div class="sdt-toolbar__dropdown" data-sdt-menu="outline">' +
-          '<div class="sdt-toolbar__hint">Guide blocks and sections</div>' +
+          '<div class="sdt-toolbar__hint">Press O to cycle</div>' +
           '<button class="sdt-toolbar__option' + (outlineMode === 'block' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-outline="block">' +
             '<span class="sdt-toolbar__option-dot"></span> Blocks — sections plus inner containers' +
           '</button>' +
@@ -1263,6 +1460,8 @@
 
     // Rebuild tree panel if open
     if (treeOpen) buildTreePanel();
+
+    emitEvent('depth-change', { depth: autoRefEnabled ? autoRefDepth : 'off' });
   }
 
   function clearOutlines() {
@@ -1306,6 +1505,7 @@
     outlineMode = OUTLINE_LABELS[newMode] ? newMode : 'off';
     applyOutlineMode();
     updateDropdown('outline', 'data-sdt-outline', outlineMode, OUTLINE_LABELS[outlineMode]);
+    emitEvent('outline-change', { outline: outlineMode });
   }
 
 
@@ -1447,6 +1647,13 @@
         e.stopPropagation();
         e.preventDefault();
         copyRef(refValue);
+        emitEvent('dataref-click', { dataRef: refValue, element: el, current: icon });
+      });
+      icon.addEventListener('mouseenter', function () {
+        emitEvent('dataref-hover', { dataRef: refValue, element: el, current: icon });
+      });
+      icon.addEventListener('mouseleave', function () {
+        emitEvent('dataref-leave', { dataRef: refValue, element: el, current: icon });
       });
 
       var tooltip = document.createElement('span');
@@ -1456,6 +1663,7 @@
         e.stopPropagation();
         e.preventDefault();
         copyRef(refValue);
+        emitEvent('dataref-click', { dataRef: refValue, element: el, current: tooltip });
       });
 
       var fullLabel = document.createElement('span');
@@ -1466,6 +1674,13 @@
         e.stopPropagation();
         e.preventDefault();
         copyRef(refValue);
+        emitEvent('dataref-click', { dataRef: refValue, element: el, current: fullLabel });
+      });
+      fullLabel.addEventListener('mouseenter', function () {
+        emitEvent('dataref-hover', { dataRef: refValue, element: el, current: fullLabel });
+      });
+      fullLabel.addEventListener('mouseleave', function () {
+        emitEvent('dataref-leave', { dataRef: refValue, element: el, current: fullLabel });
       });
 
       var link = document.createElement('span');
@@ -1784,6 +1999,324 @@
   }
 
 
+  // ─── Public events ──────────────────────────────────────────
+  // Every documented public event is dispatched on `window` with the `sdt:`
+  // prefix. Consumers listen with `window.addEventListener('sdt:<name>', ...)`.
+  // Catalogue:
+  //   sdt:ready         → SDT booted and the API is callable
+  //   sdt:show          → toolbar revealed (programmatic or hotkey)
+  //   sdt:hide          → toolbar dismissed
+  //   sdt:theme-change  → resolved theme changed { theme, mode }
+  //   sdt:user-change   → setUser() called
+  //   sdt:dataref-click → user clicked an SDT label/icon for a [data-ref]
+  //   sdt:dataref-hover → mouse entered an SDT label/icon for a [data-ref]
+  function emitEvent(name, detail) {
+    if (typeof window === 'undefined' || !window.dispatchEvent) return;
+    try {
+      var evt;
+      if (typeof CustomEvent === 'function') {
+        evt = new CustomEvent('sdt:' + name, { detail: detail || {}, bubbles: false, cancelable: false });
+      } else if (document.createEvent) {
+        evt = document.createEvent('CustomEvent');
+        evt.initCustomEvent('sdt:' + name, false, false, detail || {});
+      } else {
+        return;
+      }
+      window.dispatchEvent(evt);
+    } catch (e) { /* swallow */ }
+  }
+
+
+  // ─── Lifecycle (hide / show / toggle) ───────────────────────
+  // hide()/show()/toggle() are the canonical visibility API. They're idempotent,
+  // safe to call before SDT has booted (the desired state is applied during
+  // init), and they fire sdt:show / sdt:hide events.
+  function applyVisibility() {
+    if (!document.body) return; // init() will re-apply once body exists
+    shadowHost.style.display = presentationMode ? 'none' : '';
+    setClassState(document.body, 'sdt-presentation', presentationMode);
+  }
+
+  function hide() {
+    if (presentationMode) return; // already hidden, no-op
+    // Global hide — close every secondary surface so a single hide() (or Esc)
+    // returns the page to a clean state. closeAllDropdowns / toggleTree are
+    // function declarations defined later in this file and are safely hoisted.
+    closeAllDropdowns();
+    if (treeOpen) toggleTree();
+    presentationMode = true;
+    applyVisibility();
+    emitEvent('hide', {});
+  }
+
+  function show() {
+    if (!presentationMode) return; // already visible, no-op
+    presentationMode = false;
+    applyVisibility();
+    emitEvent('show', {});
+  }
+
+  function toggleVisibility() {
+    if (presentationMode) show(); else hide();
+  }
+
+
+  // ─── Theme management ───────────────────────────────────────
+  // 'auto' follows OS preference + the host's `html.dark` class. 'light' /
+  // 'dark' pin explicitly. The resolved theme drives the `sdt-theme-dark`
+  // class on the shadow host, which the CSS reads via `:host(.sdt-theme-dark)`.
+  function detectAutoTheme() {
+    if (document.documentElement && document.documentElement.classList && document.documentElement.classList.contains('dark')) {
+      return 'dark';
+    }
+    if (window.matchMedia) {
+      try {
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+      } catch (e) { /* IE/Safari edge */ }
+    }
+    return 'light';
+  }
+
+  function applyTheme() {
+    var next = (theme === 'light' || theme === 'dark') ? theme : detectAutoTheme();
+    setClassState(shadowHost, 'sdt-theme-dark', next === 'dark');
+    var prev = resolvedTheme;
+    resolvedTheme = next;
+    if (prev !== next) emitEvent('theme-change', { theme: next, mode: theme });
+  }
+
+  function setupThemeMediaListener() {
+    if (darkMediaQuery || !window.matchMedia) return;
+    try {
+      darkMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    } catch (e) { darkMediaQuery = null; return; }
+    var handler = function () { if (theme === 'auto') applyTheme(); };
+    if (darkMediaQuery.addEventListener) darkMediaQuery.addEventListener('change', handler);
+    else if (darkMediaQuery.addListener) darkMediaQuery.addListener(handler);
+  }
+
+  // Watch <html class> mutations so `theme: 'auto'` reacts when the host
+  // toggles `html.dark` post-init. Without this, the legacy `:host-context`
+  // selectors would update the visual theme correctly but `getTheme()` would
+  // return a stale value until next setTheme() call.
+  var htmlClassObserver = null;
+  function setupHtmlClassObserver() {
+    if (htmlClassObserver || typeof MutationObserver === 'undefined') return;
+    if (!document.documentElement) return;
+    try {
+      htmlClassObserver = new MutationObserver(function () {
+        if (theme === 'auto') applyTheme();
+      });
+      htmlClassObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class']
+      });
+    } catch (e) { htmlClassObserver = null; }
+  }
+
+  function setTheme(value) {
+    if (value !== 'auto' && value !== 'light' && value !== 'dark') {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[seguru-debug-toolbar] setTheme expected "auto" | "light" | "dark", got', value);
+      }
+      return;
+    }
+    theme = value;
+    persistTheme(value);
+    applyTheme();
+    setupThemeMediaListener();
+  }
+
+  function getTheme() { return resolvedTheme; }
+
+
+  // ─── Identity (host-supplied user) ──────────────────────────
+  function renderUser() {
+    var pill = toolbar.querySelector('[data-sdt-user-pill]');
+    if (!pill) return;
+    var avatar = pill.querySelector('[data-sdt-user-avatar]');
+    var nameEl = pill.querySelector('[data-sdt-user-name]');
+    var roleEl = pill.querySelector('[data-sdt-user-role]');
+    if (!currentUser || !currentUser.name) {
+      // Clear inner spans on `setUser(null)`. The pill is hidden via the class
+      // toggle, but `role="status"` content is sometimes surfaced by assistive
+      // tech even when display:none — leaving stale text would let a previous
+      // user's name leak after sign-out.
+      if (avatar) avatar.textContent = '';
+      if (nameEl) nameEl.textContent = '';
+      if (roleEl) { roleEl.textContent = ''; roleEl.style.display = 'none'; }
+      pill.classList.remove('sdt-toolbar__user--visible');
+      pill.removeAttribute('title');
+      return;
+    }
+    var name = String(currentUser.name);
+    var role = currentUser.role ? String(currentUser.role) : '';
+    var initial = name.replace(/\s+/g, ' ').trim().charAt(0).toUpperCase() || '·';
+    if (avatar) avatar.textContent = initial;
+    if (nameEl) nameEl.textContent = name;
+    if (roleEl) {
+      if (role) {
+        roleEl.textContent = role;
+        roleEl.style.display = '';
+      } else {
+        roleEl.textContent = '';
+        roleEl.style.display = 'none';
+      }
+    }
+    pill.title = role ? (name + ' · ' + role) : name;
+    pill.classList.add('sdt-toolbar__user--visible');
+  }
+
+  // Snapshot the documented public fields only. Anything else the host hands us
+  // (auth tokens, internal IDs) is dropped on the floor. Returns a fresh object
+  // every call so external mutation can't reach SDT's stored state.
+  function snapshotUser(u) {
+    if (!u || typeof u !== 'object') return null;
+    var clone = {};
+    if ('name'  in u) clone.name  = u.name;
+    if ('role'  in u) clone.role  = u.role;
+    if ('id'    in u) clone.id    = u.id;
+    if ('email' in u) clone.email = u.email;
+    return clone;
+  }
+
+  function setUser(user) {
+    if (user === null || typeof user === 'undefined') {
+      currentUser = null;
+    } else if (typeof user === 'object') {
+      currentUser = snapshotUser(user);
+    } else {
+      return;
+    }
+    renderUser();
+    emitEvent('user-change', { user: getUser() });
+  }
+
+  function getUser() { return snapshotUser(currentUser); }
+
+
+  // ─── Hotkey + dock helpers ──────────────────────────────────
+  function updateModeHint() {
+    if (!toolbar) return;
+    var hint = toolbar.querySelector('[data-sdt-mode-hint]');
+    if (!hint) return;
+    hint.textContent = hotkey
+      ? ('Press L to cycle · ' + hotkey + ' to hide all')
+      : 'Press L to cycle';
+  }
+
+  function setHotkey(value) {
+    hotkey = normalizeHotkey(value);
+    updateModeHint();
+  }
+
+  function applyStyleSnippet(el, snippet) {
+    if (!el) return;
+    el.style.top = '';
+    el.style.bottom = '';
+    el.style.left = '';
+    el.style.right = '';
+    if (!snippet) return;
+    var parts = snippet.split(';');
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i];
+      if (!p) continue;
+      var idx = p.indexOf(':');
+      if (idx === -1) continue;
+      var key = p.slice(0, idx).trim();
+      var val = p.slice(idx + 1).trim();
+      if (!key || !val) continue;
+      var camel = key.replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); });
+      try { el.style[camel] = val; } catch (e) { /* ignore unknown */ }
+    }
+  }
+
+  function applyDockPosition() {
+    applyStyleSnippet(toolbar, posMap[position] || posMap['bottom-right']);
+    applyStyleSnippet(toast, toastPosMap[position] || toastPosMap['bottom-right']);
+    applyStyleSnippet(treePanel, treePanelPosMap[position] || treePanelPosMap['bottom-right']);
+  }
+
+  // Heuristic for `dock: 'auto'` — pick the corner least likely to collide
+  // with a fixed sidebar / panel / banner / modal. Inspects fixed + sticky
+  // elements that are at least 100×100px and overlap a 220×60px box anchored
+  // at each corner. Preference order matches the static default
+  // (bottom-right > bottom-left > top-right > top-left). The choice is sticky
+  // — we don't re-evaluate on resize.
+  function pickAutoDock() {
+    var w = (window.innerWidth || document.documentElement.clientWidth || 1024);
+    var h = (window.innerHeight || document.documentElement.clientHeight || 768);
+    var corners = {
+      'bottom-right': { x1: w - 220, y1: h - 60, x2: w,   y2: h },
+      'bottom-left':  { x1: 0,       y1: h - 60, x2: 220, y2: h },
+      'top-right':    { x1: w - 220, y1: 0,      x2: w,   y2: 60 },
+      'top-left':     { x1: 0,       y1: 0,      x2: 220, y2: 60 }
+    };
+    var blocked = { 'bottom-right': false, 'bottom-left': false, 'top-right': false, 'top-left': false };
+
+    if (!document.body) return 'bottom-right';
+    var candidates = document.body.querySelectorAll('*');
+    for (var i = 0; i < candidates.length; i++) {
+      var el = candidates[i];
+      if (el === shadowHost || (shadowHost && shadowHost.contains(el))) continue;
+      var cs;
+      try { cs = window.getComputedStyle(el); } catch (e) { continue; }
+      if (!cs) continue;
+      if (cs.position !== 'fixed' && cs.position !== 'sticky') continue;
+      if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+      var r;
+      try { r = el.getBoundingClientRect(); } catch (e) { continue; }
+      if (!r || r.width < 100 || r.height < 100) continue;
+      for (var name in corners) {
+        if (!Object.prototype.hasOwnProperty.call(corners, name)) continue;
+        var c = corners[name];
+        if (!(r.right < c.x1 || r.left > c.x2 || r.bottom < c.y1 || r.top > c.y2)) {
+          blocked[name] = true;
+        }
+      }
+    }
+    var pref = ['bottom-right', 'bottom-left', 'top-right', 'top-left'];
+    for (var p = 0; p < pref.length; p++) {
+      if (!blocked[pref[p]]) return pref[p];
+    }
+    return 'bottom-right';
+  }
+
+  function setDock(value) {
+    var normalized;
+    if (value === 'auto') {
+      normalized = pickAutoDock();
+    } else {
+      normalized = normalizeDock(value);
+    }
+    if (!normalized) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[seguru-debug-toolbar] setDock expected auto/bottom-right/bottom-left/top-right/top-left, got', value);
+      }
+      return;
+    }
+    position = normalized;
+    closeAllDropdowns();
+    applyDockPosition();
+  }
+
+
+  // ─── Public init() ──────────────────────────────────────────
+  // Optional explicit init — most hosts rely on the auto-init via the IIFE plus
+  // `window.seguruDebugConfig`, but init() lets a host pass config (or change
+  // it) after script load. Recognised keys: hotkey, theme, dock, user.
+  function publicInit(opts) {
+    if (!opts || typeof opts !== 'object') return api;
+    if ('hotkey' in opts) setHotkey(opts.hotkey);
+    if ('theme' in opts && (opts.theme === 'auto' || opts.theme === 'light' || opts.theme === 'dark')) {
+      setTheme(opts.theme);
+    }
+    if ('dock' in opts) setDock(opts.dock);
+    if ('user' in opts) setUser(opts.user);
+    return api;
+  }
+
+
   // ─── State management ───────────────────────────────────────
   function setState(newState) {
     state = newState;
@@ -1811,6 +2344,24 @@
     shadow.appendChild(toast);
     shadow.appendChild(treePanel);
 
+    // Resolve `dock: 'auto'` once the DOM exists, then apply dock position via
+    // inline styles so setDock() can update at runtime.
+    if (_initialDock === 'auto') {
+      position = pickAutoDock();
+    }
+    applyDockPosition();
+
+    // Apply theme before any visible chrome lands.
+    applyTheme();
+    setupThemeMediaListener();
+    setupHtmlClassObserver();
+
+    // Render user pill if a user was supplied via init config.
+    renderUser();
+
+    // Reflect the configured hotkey in the mode dropdown hint.
+    updateModeHint();
+
     convertClassRefs();
     autoRefSections();
     injectLabels();
@@ -1820,11 +2371,10 @@
     if (state !== 0) setState(state);
     if (outlineMode !== 'off') setOutline(outlineMode);
 
-    // Apply initial presentation mode (hidden by default — press H to reveal).
-    if (presentationMode) {
-      shadowHost.style.display = 'none';
-      setClassState(document.body, 'sdt-presentation', true);
-    }
+    // Apply initial visibility (hidden by default — press the visibility
+    // hotkey to reveal). hide()/show() called pre-boot have already updated
+    // `presentationMode`, so this just reflects whatever state was queued.
+    applyVisibility();
 
     // Dropdown toggle clicks
     forEachNode(toolbar.querySelectorAll('[data-sdt-toggle]'), function (trigger) {
@@ -1879,32 +2429,70 @@
     });
 
     // Keyboard shortcuts
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') { closeAllDropdowns(); return; }
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.isContentEditable) return;
+    function isTypingTarget(target) {
+      if (!target) return false;
+      var tag = target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+      if (target.isContentEditable) return true;
+      return false;
+    }
+    function hasModifier(e) {
+      return e.ctrlKey || e.metaKey || e.altKey || e.shiftKey;
+    }
 
-      if (e.key === 'h' || e.key === 'H') {
-        presentationMode = !presentationMode;
-        shadowHost.style.display = presentationMode ? 'none' : '';
-        setClassState(document.body, 'sdt-presentation', presentationMode);
+    document.addEventListener('keydown', function (e) {
+      // Esc — global one-shot hide. hide() itself closes any open dropdown +
+      // Tree panel + dismisses the toolbar, so a single Esc clears the whole
+      // surface. Skipped while typing or when modifiers are held so it doesn't
+      // compete with form / IME / app-level shortcuts.
+      if (e.key === 'Escape') {
+        if (isTypingTarget(e.target) || hasModifier(e)) return;
+        if (!presentationMode) hide();
+        return;
       }
 
+      if (isTypingTarget(e.target)) return;
+      if (hasModifier(e)) return;
+
+      // Visibility hotkey (configurable, default D). Takes priority over the
+      // fixed L / T / O cycle keys so a host that rebinds to one of those
+      // letters consistently dismisses instead of doing both.
+      if (hotkey && typeof e.key === 'string' && e.key.length === 1 && e.key.toUpperCase() === hotkey) {
+        toggleVisibility();
+        return;
+      }
+
+      // L — cycle Labels mode (Off → Icons → Full)
       if (e.key === 'l' || e.key === 'L') {
-        var MODE_CYCLE = [1, 0, 2]; // Off → Icons → Full
+        var MODE_CYCLE = [1, 0, 2];
         var nextMode = MODE_CYCLE[(MODE_CYCLE.indexOf(state) + 1) % MODE_CYCLE.length];
         setState(nextMode);
+        return;
       }
 
-      if (e.key === 'd' || e.key === 'D') {
-        var currentIdx = autoRefEnabled ? DEPTH_CYCLE.indexOf(autoRefDepth) : 0;
-        var nextIdx = (currentIdx + 1) % DEPTH_CYCLE.length;
-        setDepth(DEPTH_CYCLE[nextIdx]);
+      // T — cycle Target / Depth (Off → Sections → Blocks → Elements)
+      if (e.key === 't' || e.key === 'T') {
+        var depthIdx = autoRefEnabled ? DEPTH_CYCLE.indexOf(autoRefDepth) : 0;
+        var nextDepthIdx = (depthIdx + 1) % DEPTH_CYCLE.length;
+        setDepth(DEPTH_CYCLE[nextDepthIdx]);
+        return;
+      }
+
+      // O — cycle Outline (Off → Sections → Blocks)
+      if (e.key === 'o' || e.key === 'O') {
+        var OUTLINE_CYCLE = ['off', 'section', 'block'];
+        var oIdx = OUTLINE_CYCLE.indexOf(outlineMode);
+        if (oIdx < 0) oIdx = 0;
+        setOutline(OUTLINE_CYCLE[(oIdx + 1) % OUTLINE_CYCLE.length]);
+        return;
       }
     });
 
     window.addEventListener('resize', function () {
       resolveLabelOverlaps();
     });
+
+    emitEvent('ready', { version: SDT_VERSION });
   }
 
   if (document.readyState === 'loading') {
@@ -1915,7 +2503,17 @@
 
 
   // ─── Public API ─────────────────────────────────────────────
-  window.seguruDebugToolbar = {
+  // Existing API (setState/getState/setDepth/getDepth/setOutline/getOutline/
+  // refresh/toggleTree) is preserved verbatim — documented and in use.
+  // Additions in this version:
+  //   - hide() / show() / toggle()  — canonical visibility lifecycle
+  //   - init(opts)                  — apply { hotkey, theme, dock, user }
+  //   - setHotkey() / setDock()
+  //   - setTheme() / getTheme()
+  //   - setUser() / getUser()
+  // All additions are non-breaking.
+  var api = {
+    version: SDT_VERSION,
     setState: setState,
     getState: function () { return state; },
     setDepth: setDepth,
@@ -1929,7 +2527,29 @@
       resolveLabelOverlaps();
       applyOutlineMode();
       if (treeOpen) buildTreePanel();
-    }
+    },
+    toggleTree: toggleTree,
+    // Lifecycle
+    hide: hide,
+    show: show,
+    toggle: toggleVisibility,
+    isVisible: function () { return !presentationMode; },
+    // Hotkey
+    setHotkey: setHotkey,
+    getHotkey: function () { return hotkey; },
+    // Theme
+    setTheme: setTheme,
+    getTheme: getTheme,
+    // Identity
+    setUser: setUser,
+    getUser: getUser,
+    // Dock
+    setDock: setDock,
+    getDock: function () { return position; },
+    // Init
+    init: publicInit
   };
+
+  window.seguruDebugToolbar = api;
 
 })();

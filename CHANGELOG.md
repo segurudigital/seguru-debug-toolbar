@@ -10,6 +10,70 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ---
 
+## [2.3.0] — 2026-04-26
+
+Public-API improvements that make SDT a better neighbour to other on-page tools (overlays, sidebars, devtools, review panels). All additions are non-breaking — every documented method from earlier versions (`setState` / `getState` / `setDepth` / `getDepth` / `setOutline` / `getOutline` / `refresh` / `toggleTree`) keeps the same signature and behaviour.
+
+### Added
+
+- **Lifecycle methods on `window.seguruDebugToolbar`** — `hide()`, `show()`, `toggle()`, and `isVisible()`. Idempotent, safe to call before SDT has finished booting (the desired state is applied during init), and emit `sdt:show` / `sdt:hide` events. `setState({ hidden: ... })` is no longer the recommended path; the new methods are canonical and the lower-level `setState` stays for label-mode control.
+- **Configurable visibility hotkey** — `init({ hotkey: 'D' })`, `setHotkey('Z')`, or `data-hotkey="D"` on the script tag. Default remains `H` for backwards compatibility. Pass `false` to disable the binding entirely. Hotkey is ignored in inputs / textarea / select / contenteditable, and ignored when Cmd / Ctrl / Alt / Meta / Shift are held. Tightened to `A`–`Z` only — anything else falls back to `H` with a console warning.
+- **Esc cycles toward "everything closed"** — open dropdown → close dropdown; else open Tree panel → close Tree; else toolbar visible → hide it. Bound unconditionally with the same focus + modifier guards as the visibility hotkey.
+- **Theme system** — `setTheme('auto' | 'light' | 'dark')`, `getTheme()`, `init({ theme: 'dark' })`, `data-theme="dark"`. `auto` (default) follows OS `prefers-color-scheme` plus the host's `html.dark` class and listens to `matchMedia` change events so the toolbar updates as the OS appearance flips. A `MutationObserver` watches `<html>` for class changes so `getTheme()` stays in sync when the host toggles dark mode dynamically. The chosen value is persisted under the `seguru-debug-toolbar:theme` localStorage key. Internally the toolbar applies `sdt-theme-dark` on its shadow host; the legacy `:host-context(html.dark)` selectors are kept in parallel so existing hosts that toggle `html.dark` continue to work without changes.
+- **Public events on `window`** — `sdt:ready`, `sdt:show`, `sdt:hide`, `sdt:theme-change`, `sdt:depth-change`, `sdt:outline-change`, `sdt:user-change`, `sdt:dataref-click`, `sdt:dataref-hover`, `sdt:dataref-leave`. All dispatched as `CustomEvent`s on `window`, with an `sdt:` prefix to avoid collisions. `dataref-*` events carry `{ dataRef, element, current }` so consumer tools (review sidebars, feedback panels, QA tools) can wire SDT into their own UX without SDT taking a dependency on them.
+- **Identity hook** — `setUser({ name, role, id, email })` / `setUser(null)` / `getUser()`, plus `init({ user })`. When set, the toolbar renders a small Seguru-blue avatar + name + role pill in its chrome. The pill uses `role="status"` (no `aria-live` over-announce) and the avatar is `aria-hidden` (decorative — the name carries meaning to screen readers). `setUser()` snapshots the documented public fields only; `getUser()` returns a fresh clone every call so external mutation can't reach SDT's stored state. SDT never reads cookies or auth tokens itself; hosts call `setUser()` from their own auth code.
+- **Configurable dock position** — `init({ dock: 'bottom-left' })`, `setDock('top-right')`, `getDock()`, or `data-dock="bottom-left"`. Accepts `bottom-right`, `bottom-left`, `top-right`, `top-left`, or `'auto'`. The legacy `position` config key is still honoured as an alias. `'auto'` runs a one-shot heuristic at boot: it inspects fixed and sticky elements ≥100×100px and picks the corner with no overlap (preference: bottom-right → bottom-left → top-right → top-left). Dock can be changed at runtime — toast and Tree panel positions follow, and any open dropdown closes automatically to avoid stale positioning.
+- **`init(opts)` method** — runtime convenience for applying `{ hotkey, theme, dock, user }` after script load. Returns the API object for chaining.
+- **`seguruDebugToolbar.version` static property** — exposes the bundled SDT version. The same value is emitted in the `sdt:ready` event payload via a single `SDT_VERSION` constant so the two never drift.
+- **Dynamic mode-dropdown hint** — the "Press L to cycle · H to hide all" hint inside the Labels dropdown now reflects the currently bound visibility hotkey, so rebinding via `setHotkey('Z')` updates the hint text in place instead of leaving stale copy.
+- **`docs/integrations.md`** — generic integration guide covering theme-sync with a host theme system, identity from a host auth system, and listening for `sdt:dataref-click` to wire SDT into a custom review or feedback panel. Includes a worked example of all three composed into a review-sidebar-style host.
+
+### Changed
+
+- **Dock / toast / tree panel positioning** — applied via inline styles instead of being baked into the static shadow CSS, so `setDock()` can update the corner at runtime. Visual output is unchanged.
+- **User pill visual hierarchy** — avatar now uses Seguru blue (`#00C0F3`, matches the badge) instead of the orange UI accent so the identity affordance reads as identity, not as another active control. A subtle left divider separates the pill from the badge when both are present, and the role text is rendered at 10px in normal case for legibility (was 9px uppercase).
+- **README** — six new sections (Programmatic control, Hotkey, Theme, Events, Identity, Dock position) covering the additions above. Adds a config-precedence table, a full public-API surface table (now includes `toggleTree()`, previously undocumented), and a scope note clarifying that the theme system controls toolbar chrome only — on-page `[data-ref]` labels keep their per-element luminance detection so they always read clearly against the surface they sit on.
+- **Bundle size** — ~51.2 KB minified (up from ~42 KB) for the additional API surface, theme management, event bus, user pill chrome, html-class observer, and dock-auto heuristic.
+
+### Fixed
+
+- **User pill no longer leaks stale identity after `setUser(null)`** — `renderUser()` was leaving the previous user's avatar initial, name, and role inside the pill spans when the pill was hidden. Visually the pill is `display:none` so users never saw it, but `role="status"` content can be surfaced by some assistive-tech flows even when hidden, so a previous reviewer's name could leak after sign-out. Spans are now wiped to empty strings on clear. Surfaced by the Playwright browser QA pass.
+- **S badge alignment + size** — the badge had asymmetric padding (`0 8px 0 4px`), so the 16px SVG sat offset-left within its 28px click area; the offset was visible whenever a user hovered the badge. Padding is now symmetric (`0 6px`) and the SVG bumps to 20px so the brand mark reads with proper weight next to the 18px user-pill avatar. Surfaced by the user QA pass.
+- **User pill avatar colour clash with the badge** — the avatar was Seguru blue (matching the badge), so the two cyan circles read as duplicated when sat side-by-side. Avatar moves to a neutral dark slate (`#111827`) in light mode and zinc (`#71717A`) in dark mode so the S badge remains the single Seguru-blue anchor in the toolbar.
+- **Demo `Dark mode` button is now reliable** — previously it only toggled `html.dark`, so it was a no-op once SDT had been pinned to a specific theme via `setTheme()` (or via persisted localStorage from a prior session). The button now also calls `seguruDebugToolbar.setTheme()` directly so the toggle works regardless of pinned/persisted state. The demo also drops its `autoRef:'0'` override when no URL param is set, so the new SDT default (Target=Elements) flows through cleanly.
+
+### WordPress
+
+- **WP plugin bumped to 2.3.0** — both the installable plugin (`wordpress/seguru-debug-toolbar/seguru-debug-toolbar.php`) and the mu-plugin drop-in (`wordpress/seguru-debug-toolbar.php`); `SDT_VERSION` constant updated. The self-update hook on existing 2.2.x installs picks up 2.3.0 automatically within ~6 hours.
+- **WP plugin keeps auto-ref opt-in** — the SDT engine now defaults `autoRef` to ON for static / npm / CDN consumers, but the WordPress plugin's `sdt_auto_ref` setting stays at `'0'` by default so a fresh activation doesn't unexpectedly DOM-walk a large WP site. Admins explicitly enable it under Settings → Debug Toolbar → Page Builders, same as before.
+- **Settings-page UI text updated** — "Start hidden (press H to reveal)" → "press D to reveal"; the auto-ref description now points at the **Target** dropdown and the **T** key. Added a "Keyboard shortcuts" card under How It Works covering L / T / O / D / Esc.
+- **`build-wp-zip.sh` readme.txt template** — feature bullets updated for the new keymap and the public API additions (events, identity hook, dock auto), bundle size note refreshed (~52 KB), and a 2.3.0 changelog block added so plugin-directory listings stay current.
+- **`docs/usage-guide.md` and `docs/wp-settings-page.md`** — Depth → Target rename applied, key-map references aligned, and a back-compat note added so readers know `setDepth()` / `getDepth()` API method names haven't moved.
+
+### Internal
+
+- **Browser QA harness** — three QA test pages added under `test/` (`qa-preboot-hide.html`, `qa-hotkey-disabled.html`, `qa-dock.html`) covering scenarios that need different boot config than the main `test/demo.html`. Designed to be driven by Playwright MCP for the full §8 smoke checklist.
+- **`AGENTS.md` updated** with an explicit canonical-task-tracking workflow: TASKS.md is the source of truth for open work (Sprints → Phases → subtasks), CHANGELOG.md records what shipped, ROADMAP.md is the forward view, and agent todo trackers mirror TASKS.md only — never the source of truth on their own. All three docs must be in sync at the start and end of every session.
+
+### ⚠️ Breaking — keymap + defaults
+
+These are the only behavioural breaks in 2.3.0. Anything not listed here is additive.
+
+- **Default visibility hotkey changed from `H` to `D`** (for "Debug"). The hotkey is configurable, so hosts that prefer the old key can set `init({ hotkey: 'H' })`, `data-hotkey="H"`, or `setHotkey('H')`.
+- **`D` no longer cycles Target depth** (it's now the visibility hotkey). The Target cycle moved to **`T`**.
+- **New fixed key `O`** cycles Outline (Off → Sections → Blocks). Previously Outline was toolbar-only, no key binding.
+- **Esc is now a global one-shot hide** — it closes any open dropdown, the Tree panel, and dismisses the toolbar in a single press. Previously Esc only closed open dropdowns.
+- **Auto-ref defaults to ON** — Target boots at Elements out of the box. Pre-2.3.x required `autoRef: true` to enable. Hosts that want the previous opt-in behaviour can set `seguruDebugConfig.autoRef = false` (or `'0'`).
+- **Toolbar UI label `Depth` renamed to `Target`** — the public API methods `setDepth()` / `getDepth()` keep their names so existing consumers don't break; only the user-facing label changed.
+
+### Migration
+
+- All additions are additive. No public method, config key, or event surface from 2.2.x has changed shape. Existing consumers that use `setState({ hidden: true })` to dismiss the toolbar continue to work; `hide()` is the new canonical equivalent.
+- Hosts that toggle `html.dark` for dark mode keep working without any code changes — the legacy selectors are still active alongside the new theme system.
+- If you've trained users to press `H`, the simplest migration is `seguruDebugToolbar.setHotkey('H')` after page load (or `data-hotkey="H"` on the script tag).
+
+---
+
 ## [2.2.3] — 2026-04-16
 
 ### Fixed
