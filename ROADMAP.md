@@ -4,7 +4,19 @@
 
 ---
 
-## v2.3.0 — Released (this session)
+## v2.3.1 — Released (this session)
+
+**Goal:** Hotfix the click-intercept race for `[data-ref]` labels inside `opacity:0` / `visibility:hidden` / `display:none` containers — common with hover mega menus, dropdowns, modals, and inactive tabs. Origin: EC cowork session 2026-05-21 against `https://expeditioncentre.local/Pages/home/home-screen.html`. Two-layer defence: structural belt (default `pointer-events: none`, opt-in via `.sdt-visible-host`) plus a timing brace (eager-hide on ancestor mutation before rAF reads a mid-transition opacity value). See `CHANGELOG.md [2.3.1]` for the full verification probe.
+
+- [x] **Effective-visibility detection** — `isEffectivelyVisible()` walks ancestors checking `display:none` / `visibility:hidden` / `opacity:0` plus a mid-transition opacity guard.
+- [x] **Live re-evaluation** — `MutationObserver` on `style` / `class` / `hidden` plus a `transitionend` listener for `opacity` / `visibility` / `display`.
+- [x] **Structural belt** — default `pointer-events: none` on icon and full-label; opt back in via `.sdt-visible-host` once a host is confirmed visible.
+- [x] **Timing brace** — `eagerHideDescendantLabels()` runs synchronously from the MutationObserver before rAF so the close-transition window can't leave labels hit-testable.
+- [x] **Overlap solver respects visibility** — `resolveLabelOverlaps()` skips hidden refs so their would-be positions don't consume collision slots.
+
+---
+
+## v2.3.0 — Released
 
 **Goal:** Make SDT a better neighbour to other on-page tools (overlays, sidebars, devtools, review panels) by exposing a stable, namespaced public API plus a `sdt:*` event surface — without breaking any documented v2.2 behaviour.
 

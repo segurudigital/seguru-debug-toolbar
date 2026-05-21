@@ -1,6 +1,6 @@
 # Seguru Debug Toolbar — Agent Context
 
-**Version:** 2.3.0
+**Version:** 2.3.1
 **Repo:** https://github.com/segurudigital/seguru-debug-toolbar
 **Maintained by:** Seguru Digital (hello@seguru.digital)
 **License:** MIT

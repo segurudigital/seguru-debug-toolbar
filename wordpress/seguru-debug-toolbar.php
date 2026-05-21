@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Seguru Debug Toolbar (mu-plugin)
  * Description: Visual overlay for data-ref element labels. Lightweight mu-plugin drop-in.
- * Version:     2.3.0
+ * Version:     2.3.1
  * Author:      Seguru Digital
  * Author URI:  https://seguru.digital
  *

@@ -40,7 +40,7 @@
   // Single source of truth for the bundled version string. Exposed via
   // `seguruDebugToolbar.version` and emitted in the `sdt:ready` event detail.
   // Kept in sync with package.json on release.
-  var SDT_VERSION = '2.3.0';
+  var SDT_VERSION = '2.3.1';
 
   // ─── Configuration ──────────────────────────────────────────
   var ACCENT = '234, 88, 12';        // orange — functional UI accent
@@ -271,7 +271,12 @@
     '  border-radius: 50%;',
     '  z-index: 90;',
     '  cursor: pointer;',
-    '  pointer-events: auto;',
+    // pointer-events default is none; .sdt-visible-host opts in. See the
+    // "Visible-host gate" rule near the bottom of this stylesheet — the
+    // gate is added by applyLabelVisibilityState() only after a label has
+    // been confirmed to sit inside an effectively-visible host. This
+    // closes the click-intercept race documented in CHANGELOG v2.3.1.
+    '  pointer-events: none;',
     '  transition: all 0.1s;',
     '  user-select: none;',
     '}',
@@ -337,7 +342,9 @@
     '  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);',
     '  z-index: 90;',
     '  cursor: pointer;',
-    '  pointer-events: auto;',
+    // pointer-events default is none; .sdt-visible-host opts in. See the
+    // "Visible-host gate" rule near the bottom of this stylesheet.
+    '  pointer-events: none;',
     '  user-select: all;',
     '  white-space: nowrap;',
     '  max-width: 220px;',
@@ -452,6 +459,33 @@
     'body.sdt-hide .sdt-ref-link,',
     'body.sdt-presentation .sdt-ref-link {',
     '  display: none !important;',
+    '}',
+
+    // --- Hidden-ancestor suppression ---
+    // Labels for [data-ref] elements whose ancestors are display:none,
+    // visibility:hidden, or opacity:0 are hidden so invisible icons don't
+    // intercept clicks on visible page content beneath them. Toggled by
+    // applyLabelVisibilityState() and re-evaluated via MutationObserver.
+    '.sdt-ref-icon.sdt-ref-hidden,',
+    '.sdt-ref-tooltip.sdt-ref-hidden,',
+    '.sdt-ref-full-label.sdt-ref-hidden,',
+    '.sdt-ref-link.sdt-ref-hidden {',
+    '  display: none !important;',
+    '}',
+
+    // --- Visible-host gate (the structural belt) ---
+    // Icon / full-label / link labels default to pointer-events: none
+    // (see their base rules above). They opt back in to pointer-events:
+    // auto only when applyLabelVisibilityState() has confirmed their
+    // host is effectively visible and adds this class. The reactive
+    // .sdt-ref-hidden toggle (display:none) is the timing brace; this
+    // class is the structural belt — even if the reactive layer races
+    // (e.g. during a mid-transition rAF tick reading an animated opacity
+    // value), labels can never intercept clicks unless explicitly
+    // marked safe.
+    '.sdt-ref-icon.sdt-visible-host,',
+    '.sdt-ref-full-label.sdt-visible-host {',
+    '  pointer-events: auto;',
     '}',
 
   ].join('\n');
@@ -1402,6 +1436,143 @@
     return 1; // default: assume light
   }
 
+  // ─── Effective visibility detection ────────────────────────
+  // Walks ancestors to detect display:none / visibility:hidden / opacity:0,
+  // which are common patterns for hidden mega-menus, dropdowns, modals, and
+  // tabs. Returns false for any element whose ancestor chain makes it
+  // visually hidden so we can suppress its labels — otherwise invisible
+  // .sdt-ref-icon nodes would intercept clicks on the visible content
+  // beneath them (mitigated structurally by the .sdt-visible-host gate
+  // below; this check is what controls when the gate is added). Stops at
+  // <html> to avoid measuring the document itself.
+  //
+  // Mid-transition guard — when an ancestor has a configured opacity (or
+  // visibility / all) transition with non-zero duration AND its current
+  // computed opacity is between 0 and 1 exclusive, we treat the chain as
+  // hidden. The reason: getComputedStyle reads the live *animated* value
+  // during a transition, so a panel fading 1 → 0 reports ~0.62 at t=50ms
+  // — large enough to look visible to the simple `=== 0` check, but the
+  // panel is on its way to opacity:0 and clicks on the visible content
+  // beneath are about to land there, not on the panel. Treating
+  // mid-transition values as untrusted closes the 16–200ms click-intercept
+  // race on the close path. The transitionend listener re-evaluates once
+  // opacity has settled. Surfaced on EC home-screen cowork session
+  // 2026-05-21 (200ms opacity ease-out close on .ec-mega-menu panels).
+  function isEffectivelyVisible(el) {
+    var cur = el;
+    while (cur && cur.nodeType === 1 && cur !== document.documentElement) {
+      var cs;
+      try { cs = window.getComputedStyle(cur); } catch (e) { return true; }
+      if (!cs) return true;
+      if (cs.display === 'none') return false;
+      if (cs.visibility === 'hidden' || cs.visibility === 'collapse') return false;
+      var opacity = parseFloat(cs.opacity);
+      if (opacity === 0) return false;
+      if (opacity < 1 && isOpacityTransitioning(cs)) return false;
+      cur = cur.parentElement;
+    }
+    return true;
+  }
+
+  // True when the computed style carries a non-zero transition-duration for
+  // opacity, visibility, or `all`. Used by isEffectivelyVisible to know
+  // when to distrust mid-flight opacity values. transitionProperty and
+  // transitionDuration are returned as comma-separated lists when the host
+  // sets multiple — we compare them index-by-index, falling back to the
+  // first duration if the list is shorter than the property list (the
+  // CSS spec rule for missing values).
+  function isOpacityTransitioning(cs) {
+    if (!cs) return false;
+    var props = (cs.transitionProperty || '').split(',');
+    var durs = (cs.transitionDuration || '').split(',');
+    for (var i = 0; i < props.length; i++) {
+      var p = (props[i] || '').replace(/\s+/g, '');
+      var rawDur = durs[i] != null ? durs[i] : (durs[0] || '0s');
+      var d = parseFloat(rawDur);
+      if (d > 0 && (p === 'opacity' || p === 'visibility' || p === 'all')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function applyLabelVisibilityState() {
+    var refs = document.querySelectorAll('[data-ref]');
+    var anyChanged = false;
+    forEachNode(refs, function (el) {
+      var visible = isEffectivelyVisible(el);
+      if (el._sdtVisible === visible) return;
+      el._sdtVisible = visible;
+      anyChanged = true;
+      var nodes = [el._sdtIcon, el._sdtTooltip, el._sdtFullLabel, el._sdtLink];
+      for (var i = 0; i < nodes.length; i++) {
+        var n = nodes[i];
+        if (!n) continue;
+        if (visible) {
+          n.classList.remove('sdt-ref-hidden');
+          // Only icon and full-label opt in to pointer-events:auto — the
+          // tooltip stays pointer-events:none until the icon is hovered
+          // (existing :hover + .sdt-ref-tooltip rule), and the link is
+          // pointer-events:none by design.
+          if (n === el._sdtIcon || n === el._sdtFullLabel) {
+            n.classList.add('sdt-visible-host');
+          }
+        } else {
+          n.classList.add('sdt-ref-hidden');
+          n.classList.remove('sdt-visible-host');
+        }
+      }
+    });
+    return anyChanged;
+  }
+
+  // Eager-hide on mutation — the timing brace to the .sdt-visible-host gate.
+  // The MutationObserver fires synchronously after an ancestor's class or
+  // style changes. Without this, the next rAF tick is the first chance to
+  // re-evaluate visibility, leaving a ~16ms window in which labels stay
+  // pointer-events:auto and intercept clicks on visible content that's
+  // about to be revealed. Adding .sdt-ref-hidden and removing
+  // .sdt-visible-host eagerly is safe: the worst case is a brief 1-frame
+  // flicker for labels that turn out to still be visible (rAF re-eval will
+  // unhide them). Restricted to subtrees that actually contain [data-ref]
+  // descendants so unrelated DOM churn doesn't pay the cost.
+  function eagerHideDescendantLabels(node) {
+    if (!node || node.nodeType !== 1) return;
+    var refs = [];
+    if (node.hasAttribute && node.hasAttribute('data-ref') && node._sdtLabelled) refs.push(node);
+    if (node.querySelectorAll) {
+      var inner = node.querySelectorAll('[data-ref]');
+      for (var i = 0; i < inner.length; i++) {
+        if (inner[i]._sdtLabelled) refs.push(inner[i]);
+      }
+    }
+    for (var j = 0; j < refs.length; j++) {
+      var el = refs[j];
+      var nodes = [el._sdtIcon, el._sdtTooltip, el._sdtFullLabel, el._sdtLink];
+      for (var k = 0; k < nodes.length; k++) {
+        var n = nodes[k];
+        if (!n) continue;
+        n.classList.add('sdt-ref-hidden');
+        n.classList.remove('sdt-visible-host');
+      }
+      // Clear cached visibility so the rAF tick definitely re-runs the
+      // check rather than skipping due to "_sdtVisible === visible" early
+      // return.
+      el._sdtVisible = null;
+    }
+  }
+
+  var visibilityRecheckScheduled = false;
+  function scheduleVisibilityRecheck() {
+    if (visibilityRecheckScheduled) return;
+    visibilityRecheckScheduled = true;
+    var raf = window.requestAnimationFrame || function (cb) { return setTimeout(cb, 16); };
+    raf(function () {
+      visibilityRecheckScheduled = false;
+      if (applyLabelVisibilityState()) resolveLabelOverlaps();
+    });
+  }
+
   function autoRefSections() {
     if (!autoRefEnabled) return;
     var slug = getPageSlug();
@@ -1592,6 +1763,12 @@
     });
 
     forEachNode(refs, function (el) {
+      // Skip refs hidden by an ancestor (display:none / visibility:hidden /
+      // opacity:0). Their labels are display:none via .sdt-ref-hidden, so
+      // they shouldn't consume collision slots — otherwise hidden mega-menu
+      // labels would push visible labels around.
+      if (el._sdtVisible === false) return;
+
       var anchor = getActiveLabel(el);
       var attempt;
       var rect;
@@ -1697,6 +1874,9 @@
       el._sdtDepth = getRefDepth(el);
       setLabelOffset(el, getDepthLift(el._sdtDepth), el._sdtDepth);
     });
+    // Mark hidden-ancestor refs and add .sdt-ref-hidden to their labels so
+    // they don't intercept clicks on visible content beneath them.
+    applyLabelVisibilityState();
   }
 
 
@@ -2489,8 +2669,50 @@
     });
 
     window.addEventListener('resize', function () {
+      applyLabelVisibilityState();
       resolveLabelOverlaps();
     });
+
+    // Live visibility re-check. Mega menus, dropdowns, modals, and tabs flip
+    // between hidden/visible via class or inline-style mutations on
+    // ancestors — usually with opacity or display transitions. Watch the
+    // body for style/class changes (debounced via rAF) and re-check on
+    // transitionend for opacity/visibility transitions so labels appear
+    // exactly when their container does.
+    if (typeof window.MutationObserver === 'function') {
+      var visibilityObserver = new window.MutationObserver(function (mutations) {
+        var sawNonSdtMutation = false;
+        for (var i = 0; i < mutations.length; i++) {
+          var t = mutations[i].target;
+          // Ignore mutations on SDT's own label nodes (toggling
+          // .sdt-ref-hidden / .sdt-visible-host would otherwise loop).
+          if (t && t.classList && (
+            t.classList.contains('sdt-ref-icon') ||
+            t.classList.contains('sdt-ref-tooltip') ||
+            t.classList.contains('sdt-ref-full-label') ||
+            t.classList.contains('sdt-ref-link')
+          )) continue;
+          sawNonSdtMutation = true;
+          // Eager-hide all [data-ref] descendants of the mutated node
+          // before rAF schedules. This closes the ~16ms window between
+          // the mutation firing and applyLabelVisibilityState running
+          // where labels would otherwise still be pointer-events:auto.
+          eagerHideDescendantLabels(t);
+        }
+        if (sawNonSdtMutation) scheduleVisibilityRecheck();
+      });
+      visibilityObserver.observe(document.body, {
+        attributes: true,
+        attributeFilter: ['style', 'class', 'hidden'],
+        subtree: true
+      });
+    }
+
+    document.addEventListener('transitionend', function (e) {
+      if (e.propertyName === 'opacity' || e.propertyName === 'visibility' || e.propertyName === 'display') {
+        scheduleVisibilityRecheck();
+      }
+    }, true);
 
     emitEvent('ready', { version: SDT_VERSION });
   }
