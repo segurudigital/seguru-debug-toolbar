@@ -26,14 +26,18 @@
 
 **Where things were left:**
 
-- All v2.3.1 work committed locally; ready to tag + release per AGENTS.md §Release flow.
-- Source: `dist/seguru-debug-toolbar.min.js` (~53.9 KB), `dist/seguru-debug-toolbar-wp-v2.3.1.zip` (~28 KB compressed).
+- v2.3.1 is fully released across all three channels:
+  - **GitHub release** [`v2.3.1`](https://github.com/segurudigital/seguru-debug-toolbar/releases/tag/v2.3.1) with both assets attached (`seguru-debug-toolbar.min.js` ~58 KB minified, `seguru-debug-toolbar-wp-v2.3.1.zip` ~28 KB compressed).
+  - **npm** `@segurudigital/seguru-debug-toolbar@2.3.1` — `latest` dist-tag now points here. First publish failed with a 404 (expired NPM_TOKEN); fixed mid-session by user regenerating the token + a manual workflow re-run (`gh workflow run release-assets.yml -f tag=v2.3.1`).
+  - **jsDelivr** confirmed serving 2.3.1 via `cdn.jsdelivr.net/npm/@segurudigital/seguru-debug-toolbar@2.3.1/dist/seguru-debug-toolbar.min.js` (HTTP 200) and the floating `@2` tag.
+- Docs landed in commit `fd869ce` (README + docs/design.md + docs/usage-guide.md + docs/agent-rollout-prompt.md) covering the new behaviour: hidden-ancestor suppression, mid-transition guard, `+N` cluster badge.
+- WordPress self-update hook on existing 2.3.0 installs picks up 2.3.1 within ~6 hours of release.
 
 **Next session should:**
 
-1. Cut the v2.3.1 release: `gh release create v2.3.1 ...` so CI publishes the JS bundle, WP zip, and npm package.
-2. Once jsDelivr serves 2.3.1 (~few minutes after release), revalidate the EC home-screen.html transition probe against the *published* build (not the local dev copy) and confirm the close-transition race is gone in the wild.
-3. Pick the next sprint scope — see ROADMAP.md "Backlog" for candidates. Still-open questions: remove `continue-on-error: true` from `publish-npm` job now that publishes are stable; validate npm + jsDelivr served correctly post-release.
+1. Pick the next sprint scope — see ROADMAP.md "Backlog" for candidates.
+2. Decide whether to remove `continue-on-error: true` from the `publish-npm` job. It saved this release (let the GitHub side ship while npm was blocked on the expired token), so the current reflex is to keep it. Revisit only if token rotation gets formalised on a schedule.
+3. If anyone retests on the EC home-screen.html or mulgo-screen.html sites, retire the local `seguru-debug-toolbar-local.js` workaround — they should now load `@2` from jsDelivr and get 2.3.1 automatically.
 
 ---
 
