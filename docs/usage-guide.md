@@ -36,7 +36,7 @@ The **Labels** dropdown on the toolbar controls how labels appear. Click it to s
 
 ### Icons (mode 0)
 
-A small orange dot appears at the top-left of each `data-ref` element. Hover the dot to reveal a dark tooltip showing the full ref value. The tooltip also stays visible if the cursor moves from the dot onto the tooltip text. The dot is intentionally subtle so it doesn't interfere with visual review. When nearby labels would collide, the toolbar uses a depth-aware stagger, nudging deeper labels into a cleaner stepped stack and drawing a thin leader line back to the element corner so the reference stays visually anchored.
+A small orange dot appears at the top-left of each `data-ref` element. Hover the dot to reveal a dark tooltip showing the full ref value. The tooltip also stays visible if the cursor moves from the dot onto the tooltip text. The dot is intentionally subtle so it doesn't interfere with visual review. When nearby labels would collide, the toolbar uses a depth-aware stagger, nudging deeper labels into a cleaner stepped stack and drawing a thin leader line back to the element corner so the reference stays visually anchored. On very dense pages, any leftover collisions collapse into a small orange **+N** badge next to the placed dot — hover the badge to see the rest of the refs, click any row to copy.
 
 ### Off (mode 1)
 
@@ -44,7 +44,9 @@ All labels are hidden. The page looks exactly as it would to an end user. Use th
 
 ### Full (mode 2 — default)
 
-A persistent text label appears at the top-left of every `data-ref` element, showing the full ref value at all times. Labels use a dark background with white text for high contrast against any design. This mode is best for QA passes and cross-referencing against copy documents or wireframes. If neighboring labels overlap, the toolbar automatically staggers them in a depth-aware stepped pattern and adds a leader line back to the original element corner. Long labels are clipped cleanly instead of sprawling across dense nested layouts.
+A persistent text label appears at the top-left of every `data-ref` element, showing the full ref value at all times. Labels use a dark background with white text for high contrast against any design. This mode is best for QA passes and cross-referencing against copy documents or wireframes. If neighboring labels overlap, the toolbar automatically staggers them in a depth-aware stepped pattern and adds a leader line back to the original element corner. Long labels are clipped cleanly instead of sprawling across dense nested layouts. On very dense sections — typically tightly nested refs that all share the same anchor — irresolvable collisions collapse into a single orange **+N** badge next to the placed label; hover the badge to see the clustered refs and click any row to copy.
+
+Labels for refs inside hidden containers (closed mega menus, dropdowns, modals — anything with `display:none`, `visibility:hidden`, or `opacity:0` on an ancestor) are auto-suppressed so their icons can't intercept clicks on the visible content beneath them. The check is live: open the container and the labels reappear; close it and they vanish, no host integration required.
 
 ---
 
@@ -242,6 +244,6 @@ No polyfills needed. No transpilation needed. The source file is plain ES5-compa
 
 ## Performance
 
-The toolbar does one DOM scan on page load (or when you call `refresh()`) and attaches four small `<span>` elements to each `data-ref` element. On a page with 50 sections, that's 200 extra spans — still negligible. The injected `<style>` block handles most show/hide logic via CSS class toggles on `<body>`, with a lightweight depth-aware collision pass used to keep overlapping visible labels readable when needed.
+The toolbar does one DOM scan on page load (or when you call `refresh()`) and attaches four small `<span>` elements to each `data-ref` element. On a page with 50 sections, that's 200 extra spans — still negligible. The injected `<style>` block handles most show/hide logic via CSS class toggles on `<body>`, with a lightweight depth-aware collision pass that staggers overlapping labels — and, on dense pages, collapses the leftover collisions into per-anchor `+N` badges so the page stays readable. A `MutationObserver` watches for ancestor visibility changes (mega-menu opens/closes, modal toggles, opacity transitions) and re-evaluates label visibility in the next animation frame — debounced, so cost stays close to zero on a quiet page.
 
 The minified file is ~42 KB. No network requests, no external dependencies, no runtime overhead beyond the initial scan.

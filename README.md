@@ -41,7 +41,7 @@ Add `data-ref` attributes to any HTML element. The toolbar gives you three dropd
 
 Click any label to copy the `data-ref` value to your clipboard. A toast confirms the copy.
 
-When nearby labels would overlap, the toolbar uses depth-aware staggering and a thin leader line back to the element corner so the reference still reads clearly.
+When nearby labels would overlap, the toolbar uses depth-aware staggering and a thin leader line back to the element corner so the reference still reads clearly. On dense pages where staggering still can't fit every label (e.g. tightly nested refs that all share the same anchor), the remaining labels collapse into a single orange **+N** badge next to the placed label — hover it to see the full list, click any row to copy its ref. Labels inside hidden containers (closed mega menus, dropdowns, modals — anything with `display:none`, `visibility:hidden`, or `opacity:0` on an ancestor) are suppressed automatically so they can't intercept clicks on the visible content beneath them.
 
 Press **D** to hide the toolbar and all labels (presentation mode). Press **D** again to restore. (The visibility key is [configurable](#keyboard) — `D` is just the default.) **Esc** dismisses everything in one keystroke regardless of state.
 
@@ -75,7 +75,7 @@ We use it for wireframe QA, copy review, client revision rounds, and debugging b
 
 ## Install
 
-Current version: **v2.3.0** — see [CHANGELOG.md](CHANGELOG.md) for release notes.
+Current version: **v2.3.1** — see [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 **npm (React, Next, Vue, Svelte, any bundled app):**
 
@@ -367,11 +367,12 @@ The toolbar only loads for administrators, so regular site visitors never see it
 
 - **Zero dependencies** — one self-contained JS file
 - **Shadow DOM isolation** — toolbar renders in a shadow root, immune to page/builder CSS
-- **~42 KB minified** — still lightweight enough for front-end QA use
+- **~58 KB minified** — still lightweight enough for front-end QA use
 - **Click-to-copy** — click any label, get the ref value on your clipboard
 - **Dropdown controls** — Labels, Target, and Outline as compact front-end menus
 - **Outline guides** — optional section/block outlines with stronger section framing, lighter block guides, and dark-surface-aware contrast
-- **Collision-aware labels** — overlapping labels use depth-aware staggering and keep a visible leader line to their target
+- **Collision-aware labels** — overlapping labels use depth-aware staggering and keep a visible leader line to their target; on dense pages, irresolvable collisions collapse into a single **+N** badge with a hover popover
+- **Hidden-ancestor suppression** — labels for refs inside `display:none` / `visibility:hidden` / `opacity:0` containers (closed mega menus, dropdowns, modals) are auto-hidden and can't intercept clicks on visible content; reappear live when the container opens
 - **Keyboard shortcuts** — L cycles Labels, T cycles Target, O cycles Outline, D toggles toolbar visibility (configurable), Esc dismisses everything (skips input fields and modifier-key combos)
 - **Presentation mode** — H key hides toolbar + all labels for clean screenshots and client demos
 - **Tree panel** — floating element tree with nesting, context chips, hover-to-highlight, row click-to-jump, and per-row copy

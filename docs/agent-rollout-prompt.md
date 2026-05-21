@@ -171,9 +171,11 @@ Drop the minified file into `assets/` and add to `layout/theme.liquid`:
 {% endif %}
 ```
 
-## Default behaviour (as of v2.3.0)
+## Default behaviour (as of v2.3.1)
 
 On page load the toolbar is **hidden** — the script runs, labels are prepared, but nothing is visible. Press **D** to reveal the toolbar + labels. This keeps screenshots, Chrome debug captures, AI-agent browsing sessions, and client demos clean by default. (The visibility hotkey is configurable via `setHotkey()` / `init({ hotkey })` / `data-hotkey="…"`. Pre-2.3 builds used `H` as the default.)
+
+Labels never intercept clicks on hidden content. SDT auto-suppresses labels for refs inside `display:none` / `visibility:hidden` / `opacity:0` ancestors (closed mega menus, dropdowns, modals, inactive tabs) and reactively reveals them when the container opens — no host integration required. On dense pages where many labels would still overlap, irresolvable collisions collapse into a `+N` badge with a hover popover (click any row to copy that ref).
 
 When revealed, default settings are:
 - **Labels:** Full (every `data-ref` shows its value as a persistent label)
