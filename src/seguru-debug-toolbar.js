@@ -488,6 +488,120 @@
     '  pointer-events: auto;',
     '}',
 
+    // --- Cluster collapse ("+N" badge) ---
+    // When the overlap solver can't find a non-colliding slot for a
+    // label after LABEL_OFFSET_LIMIT attempts, it stashes the label on
+    // the colliding owner's cluster list and renders a single "+N"
+    // badge next to the owner's active label. Hovering the badge
+    // expands a popover listing the clustered refs. Each row is
+    // click-to-copy with the same semantics as a normal label. Solves
+    // the "wall of stacked labels" on dense pages where nested refs
+    // share the same anchor position (e.g. an `<article>` containing
+    // an `<h3>` and `<p>`, all with data-ref).
+    '.sdt-ref-clustered {',
+    '  display: none !important;',
+    '}',
+    '.sdt-cluster-badge {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  position: absolute;',
+    '  font-family: ' + FONT_MONO + ';',
+    '  font-size: 10px;',
+    '  font-weight: 600;',
+    '  line-height: 1;',
+    '  padding: 2px 5px;',
+    '  background: rgba(' + ACCENT + ', 0.18);',
+    '  color: ' + ACCENT_HEX + ';',
+    '  border: 1px solid rgba(' + ACCENT + ', 0.32);',
+    '  border-radius: 10px;',
+    '  cursor: pointer;',
+    '  z-index: 92;',
+    '  pointer-events: auto;',
+    '  user-select: none;',
+    '  white-space: nowrap;',
+    '}',
+    '.sdt-cluster-badge:hover {',
+    '  background: rgba(' + ACCENT + ', 0.92);',
+    '  color: #fff;',
+    '  border-color: rgba(' + ACCENT + ', 0.92);',
+    '}',
+    '.sdt-cluster-badge.sdt-on-dark {',
+    '  background: rgba(255, 255, 255, 0.18);',
+    '  color: rgba(255, 255, 255, 0.92);',
+    '  border-color: rgba(255, 255, 255, 0.32);',
+    '}',
+    '.sdt-cluster-badge.sdt-on-dark:hover {',
+    '  background: #fff;',
+    '  color: ' + ACCENT_HEX + ';',
+    '  border-color: #fff;',
+    '}',
+    '.sdt-cluster-popover {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: none;',
+    '  flex-direction: column;',
+    '  position: absolute;',
+    '  top: 100%;',
+    '  left: 0;',
+    '  margin-top: 4px;',
+    '  min-width: 180px;',
+    '  max-width: 320px;',
+    '  background: rgba(17, 24, 39, 0.96);',
+    '  border: 1px solid rgba(255, 255, 255, 0.1);',
+    '  border-radius: 4px;',
+    '  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24);',
+    '  padding: 4px;',
+    '  z-index: 93;',
+    '  pointer-events: auto;',
+    '}',
+    '.sdt-cluster-badge:hover > .sdt-cluster-popover,',
+    '.sdt-cluster-popover:hover {',
+    '  display: flex;',
+    '}',
+    '.sdt-cluster-item {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: flex;',
+    '  align-items: baseline;',
+    '  gap: 6px;',
+    '  padding: 4px 6px;',
+    '  font-family: ' + FONT_MONO + ';',
+    '  font-size: 10px;',
+    '  line-height: 1.3;',
+    '  color: #FFF7ED;',
+    '  cursor: pointer;',
+    '  border-radius: 3px;',
+    '  white-space: nowrap;',
+    '  overflow: hidden;',
+    '  text-overflow: ellipsis;',
+    '}',
+    '.sdt-cluster-item:hover {',
+    '  background: rgba(' + ACCENT + ', 0.92);',
+    '  color: #fff;',
+    '}',
+    '.sdt-cluster-item-tag {',
+    '  all: initial;',
+    '  font-family: ' + FONT_MONO + ';',
+    '  font-size: 10px;',
+    '  font-weight: 600;',
+    '  color: inherit;',
+    '  opacity: 0.55;',
+    '  flex-shrink: 0;',
+    '}',
+    '.sdt-cluster-item-ref {',
+    '  all: initial;',
+    '  font-family: ' + FONT_MONO + ';',
+    '  font-size: 10px;',
+    '  color: inherit;',
+    '  overflow: hidden;',
+    '  text-overflow: ellipsis;',
+    '  white-space: nowrap;',
+    '}',
+    'body.sdt-hide .sdt-cluster-badge,',
+    'body.sdt-presentation .sdt-cluster-badge {',
+    '  display: none !important;',
+    '}',
+
   ].join('\n');
 
   document.head.appendChild(labelCss);
@@ -1751,9 +1865,13 @@
 
   function resolveLabelOverlaps() {
     var refs;
-    var placed = [];
+    // placedSlots — array of { rect, owner } for each placed label.
+    // `owner` is the [data-ref] element so unplaceable labels can be
+    // attached to its cluster.
+    var placedSlots = [];
 
     resetLabelOffsets();
+    clearClusters();
     if (presentationMode || state === 1) return;
 
     refs = toArray(document.querySelectorAll('[data-ref]'));
@@ -1772,7 +1890,7 @@
       var anchor = getActiveLabel(el);
       var attempt;
       var rect;
-      var collision;
+      var collisionWith;
       var i;
       var preferredOffset;
 
@@ -1780,23 +1898,133 @@
 
       preferredOffset = getDepthLift(el._sdtDepth || 0);
 
+      collisionWith = null;
       for (attempt = 0; attempt < LABEL_OFFSET_LIMIT; attempt++) {
         setLabelOffset(el, preferredOffset + (attempt * LABEL_OFFSET_STEP), el._sdtDepth || 0);
         rect = anchor.getBoundingClientRect();
-        collision = false;
+        collisionWith = null;
 
-        for (i = 0; i < placed.length; i++) {
-          if (rectsOverlap(rect, placed[i], LABEL_COLLISION_GAP)) {
-            collision = true;
+        for (i = 0; i < placedSlots.length; i++) {
+          if (rectsOverlap(rect, placedSlots[i].rect, LABEL_COLLISION_GAP)) {
+            collisionWith = placedSlots[i];
             break;
           }
         }
 
-        if (!collision) break;
+        if (!collisionWith) break;
       }
 
-      placed.push(anchor.getBoundingClientRect());
+      if (collisionWith) {
+        // All LABEL_OFFSET_LIMIT lift attempts still collide — collapse
+        // this label into the colliding slot's cluster. The "owner"
+        // (placed first) keeps its anchor visible; this ref is hidden
+        // and surfaced via the +N badge on the owner.
+        addToCluster(collisionWith.owner, el);
+      } else {
+        placedSlots.push({ rect: anchor.getBoundingClientRect(), owner: el });
+      }
     });
+
+    // After all placements are known, render +N badges on owners that
+    // accumulated cluster members.
+    for (var s = 0; s < placedSlots.length; s++) {
+      renderClusterBadgeIfNeeded(placedSlots[s].owner);
+    }
+  }
+
+
+  // ─── Cluster collapse (the "+N" badge) ─────────────────────────
+  // When a label can't be placed without collision after every offset
+  // attempt, instead of letting it pile on top of the colliding owner
+  // we hide the unplaceable label and remember it on the owner's
+  // `_sdtCluster` list. After resolveLabelOverlaps finishes placing
+  // every label, owners with non-empty clusters get a "+N" badge
+  // appended next to their active label; hovering the badge expands a
+  // small popover listing the clustered refs (each row click-to-copy
+  // with the same semantics as a normal label). The badge respects
+  // the same body.sdt-hide / sdt-presentation rules as the labels.
+
+  function clearClusters() {
+    var clustered = document.querySelectorAll('.sdt-ref-clustered');
+    forEachNode(clustered, function (n) { n.classList.remove('sdt-ref-clustered'); });
+    var badges = document.querySelectorAll('.sdt-cluster-badge');
+    forEachNode(badges, function (b) { b.parentNode && b.parentNode.removeChild(b); });
+    // Clear per-owner cluster lists from the previous resolution pass.
+    var refs = document.querySelectorAll('[data-ref]');
+    forEachNode(refs, function (el) {
+      el._sdtCluster = null;
+      el._sdtClusterBadge = null;
+    });
+  }
+
+  function addToCluster(ownerEl, memberEl) {
+    if (!ownerEl._sdtCluster) ownerEl._sdtCluster = [];
+    ownerEl._sdtCluster.push(memberEl);
+    // Hide all label variants of the clustered member so it can't
+    // collide visually with anything else and can't intercept clicks.
+    var nodes = [memberEl._sdtIcon, memberEl._sdtTooltip, memberEl._sdtFullLabel, memberEl._sdtLink];
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i]) nodes[i].classList.add('sdt-ref-clustered');
+    }
+  }
+
+  function renderClusterBadgeIfNeeded(ownerEl) {
+    var cluster = ownerEl._sdtCluster;
+    if (!cluster || cluster.length === 0) return;
+    var anchor = getActiveLabel(ownerEl);
+    if (!anchor) return;
+
+    var bgLum = getEffectiveBgLuminance(ownerEl);
+    var bgClass = bgLum < 0.40 ? 'sdt-on-dark' : 'sdt-on-light';
+
+    var badge = document.createElement('span');
+    badge.className = 'sdt-cluster-badge ' + bgClass;
+    badge.textContent = '+' + cluster.length;
+    badge.title = cluster.length + ' more ref' + (cluster.length === 1 ? '' : 's') + ' here — hover to expand';
+
+    // Position the badge just to the right of the active label. Both
+    // the badge and the active label are absolutely positioned children
+    // of the same owner element, so the badge inherits the same
+    // containing block.
+    var anchorTop = parseFloat(anchor.style.top || '2');
+    var anchorLeft = parseFloat(anchor.style.left || '2');
+    var anchorWidth = anchor.getBoundingClientRect().width;
+    badge.style.top = anchorTop + 'px';
+    badge.style.left = (anchorLeft + anchorWidth + 4) + 'px';
+
+    // Popover with one row per clustered ref. Row click copies the ref
+    // value to clipboard via copyRef() and emits the same
+    // sdt:dataref-click event that a regular label would.
+    var popover = document.createElement('span');
+    popover.className = 'sdt-cluster-popover';
+    for (var i = 0; i < cluster.length; i++) {
+      var member = cluster[i];
+      var memberRef = member.getAttribute('data-ref');
+      var memberCtx = getElementContext(member);
+      var row = document.createElement('span');
+      row.className = 'sdt-cluster-item';
+      var tag = document.createElement('span');
+      tag.className = 'sdt-cluster-item-tag';
+      tag.textContent = memberCtx;
+      var refSpan = document.createElement('span');
+      refSpan.className = 'sdt-cluster-item-ref';
+      refSpan.textContent = memberRef;
+      row.appendChild(tag);
+      row.appendChild(refSpan);
+      (function (refValue, refEl, rowEl) {
+        row.addEventListener('click', function (e) {
+          e.stopPropagation();
+          e.preventDefault();
+          copyRef(refValue);
+          emitEvent('dataref-click', { dataRef: refValue, element: refEl, current: rowEl });
+        });
+      }(memberRef, member, row));
+      popover.appendChild(row);
+    }
+    badge.appendChild(popover);
+
+    ownerEl.appendChild(badge);
+    ownerEl._sdtClusterBadge = badge;
   }
 
   function injectLabels() {

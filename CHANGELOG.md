@@ -12,17 +12,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ## [2.3.1] — 2026-05-21
 
-Click-intercept hotfix for `[data-ref]` labels overlaying mega menus, dropdowns, and any other container hidden with `opacity:0` / `visibility:hidden` / `display:none`. Surfaced from an EC cowork session against `https://expeditioncentre.local/Pages/home/home-screen.html` and reproduced in a 200ms opacity ease-out close transition on `.ec-mega-menu` panels. Two-layer defence — a structural belt that defaults labels to `pointer-events: none` (opt-in via the new `.sdt-visible-host` class) and a timing brace that eager-hides descendant labels the moment an ancestor's class/style mutates, before the next rAF tick can read a mid-transition opacity value.
+Two related fixes for ref-label crowding on dense pages, both surfaced from an EC cowork session against `https://expeditioncentre.local/Pages/mulgo/mulgo-screen.html` and `home-screen.html`:
+
+1. **Click-intercept hotfix** for labels overlaying mega menus, dropdowns, and any other container hidden with `opacity:0` / `visibility:hidden` / `display:none`. Reproduced in a 200ms opacity ease-out close transition on `.ec-mega-menu` panels. Two-layer defence — a structural belt that defaults labels to `pointer-events: none` (opt-in via the new `.sdt-visible-host` class) and a timing brace that eager-hides descendant labels the moment an ancestor's class/style mutates, before the next rAF tick can read a mid-transition opacity value.
+2. **Cluster collapse** for the residual case where N labels would still pile at the same anchor after the overlap solver exhausts its lift attempts (typically tightly nested refs — e.g. an article with `h3 + summary + p` all data-ref'd). The unplaceable labels are hidden and surfaced via a single orange "+N" badge next to the placed label; hovering the badge expands a popover listing each clustered ref, click-to-copy with the same semantics as a normal label.
 
 ### Fixed
 
 - **Labels can no longer intercept clicks while their host ancestor is hidden or fading.** Before this release, an SDT `.sdt-ref-icon` inside an `opacity:0` mega menu (or any `display:none` / `visibility:hidden` container) was still laid out at its real position with `pointer-events: auto`. Because opacity cascades visually but the icon's own `pointer-events:auto` overrode the parent's `pointer-events:none`, invisible icons silently captured clicks meant for the visible page beneath. On dense pages with hidden mega menus, this also presented as "label stacking" — dozens of invisible icons clustered at the menu's would-be position.
 - **No more close-transition race.** On the close path (e.g. a mega menu fading 1 → 0 over 200ms), the `MutationObserver` introduced in this release fires on the class removal, but the next rAF tick reads `getComputedStyle(...).opacity` at the *animated* mid-transition value (~0.94 at +16ms). The old `parseFloat(opacity) === 0` check treated that as visible and kept labels hit-testable for ~16–200ms while the panel faded out. The new mid-transition guard treats opacity ∈ (0, 1) as untrusted whenever an ancestor's `transition-property` covers `opacity` / `visibility` / `all` with a non-zero `transition-duration`, and the eager-hide-on-mutation pass closes the same window structurally.
 - **Hidden labels no longer push visible ones around in the overlap solver.** `resolveLabelOverlaps()` now skips refs flagged hidden so their would-be positions don't consume collision slots.
+- **No more piles of stacked labels on dense pages.** Previously the offset solver tried 6 vertical lifts × 18px = 108px max, then gave up — leaving the unplaceable label piled on top of the winner. On nested-ref structures (e.g. `<article data-ref> > <h3 data-ref> + <p data-ref>` where all three sit at the same top-left) this produced a wall of overlapping labels even with the depth indent applied. The solver now collapses unplaceable labels into a clickable `+N` badge instead (see Added below).
 
 ### Added
 
 - **`.sdt-visible-host` class** — pointer-events gate. `.sdt-ref-icon` and `.sdt-ref-full-label` now default to `pointer-events: none`; they opt back in to `pointer-events: auto` only when `applyLabelVisibilityState()` has confirmed the host is effectively visible and adds this class. This is the structural belt: even if a future regression breaks the reactive `.sdt-ref-hidden` toggle, labels can never intercept clicks unless explicitly marked safe. Paired with the timing brace below.
+- **Cluster collapse with `+N` hover popover.** When the overlap solver exhausts all `LABEL_OFFSET_LIMIT` lift attempts and a label still collides, the label is hidden (`.sdt-ref-clustered`) and stashed on the placed owner's `_sdtCluster` list. After all placements are known, owners with non-empty clusters get a small orange `+N` badge appended next to their active label. Hovering the badge expands a popover listing each clustered ref as `tag · data-ref-value`; clicking a row copies the ref value to clipboard and fires the standard `sdt:dataref-click` event (same semantics as a normal label click). Badge respects `body.sdt-hide` / `body.sdt-presentation` (hidden alongside labels) and switches to a light-on-dark variant via the same `sdt-on-dark` luminance class as the labels.
 - **`.sdt-ref-hidden` class** — display gate, toggled on icon / tooltip / full-label / link when the host fails `isEffectivelyVisible()`. Composes with the existing `body.sdt-hide` / `body.sdt-full` / `body.sdt-presentation` rules via `display: none !important`.
 - **Live visibility tracking** — a `MutationObserver` watches `style` / `class` / `hidden` attribute mutations across `document.body` (debounced via `requestAnimationFrame`), plus a `transitionend` listener for `opacity` / `visibility` / `display` transitions. Labels appear the moment a mega menu opens and disappear when it closes, with no host integration required. Mutations on SDT's own label nodes are filtered to prevent feedback loops when `.sdt-ref-hidden` / `.sdt-visible-host` are toggled.
 
@@ -32,16 +37,27 @@ Click-intercept hotfix for `[data-ref]` labels overlaying mega menus, dropdowns,
 - `isOpacityTransitioning(cs)` — paired helper that reads `transitionProperty` and `transitionDuration` (parsed as comma-separated lists per spec, with the first duration filling shorter lists) and returns true when an opacity transition is configured.
 - `eagerHideDescendantLabels(node)` runs synchronously from the MutationObserver before `scheduleVisibilityRecheck()`. Adds `.sdt-ref-hidden` and removes `.sdt-visible-host` on every labelled `[data-ref]` descendant of the mutated node, clearing the cached `_sdtVisible` flag so the next rAF re-evaluates. Worst case is a 1-frame flicker for labels that turn out to still be visible.
 - New CSS rules `.sdt-ref-icon.sdt-visible-host` / `.sdt-ref-full-label.sdt-visible-host` set `pointer-events: auto`; base `.sdt-ref-icon` / `.sdt-ref-full-label` now default `pointer-events: none`. The pointer-events change is the only behavioural delta to the label CSS in this release.
+- `resolveLabelOverlaps()` now tracks `{ rect, owner }` per placed slot instead of just rects, so unplaceable labels can be attached to the colliding owner's cluster via `addToCluster()`. `renderClusterBadgeIfNeeded()` runs in a second pass after all placements are settled. `clearClusters()` runs at the top of each `resolveLabelOverlaps()` call to wipe `.sdt-ref-clustered` from previously-clustered labels, remove existing `.sdt-cluster-badge` nodes, and reset per-owner `_sdtCluster` / `_sdtClusterBadge` references — so mode/depth/visibility transitions rebuild cleanly with no stale badges.
+- Badge styling: orange pill (`rgba(234,88,12,0.18)` bg, `#EA580C` text) on light surfaces; white-on-dark variant via the existing `sdt-on-dark` luminance branch. Popover is `display:none` by default, `display:flex` on `:hover` of the badge or popover (so cursor can move from badge → popover without dismissing).
 
 ### Verification
 
-Cowork session 2026-05-21, EC site `home-screen.html`, 345 refs, `elementsFromPoint` probe at a 60×60 grid (168 sample points) across the nav-panel area. Numbers are v2.3.0 → v2.3.1:
+Click-intercept probe — `home-screen.html`, 345 refs, `elementsFromPoint` at a 60×60 grid (168 sample points) across the nav-panel area. Numbers are v2.3.0 → v2.3.1:
 
 - Steady state, panel closed: 17 → 1 intercepts (all from real visible nav content)
 - Opened state: 26 → varies (real visible content)
 - **Close t=50ms (opacity ≈ 0.86): 26 → 2 — 15 mega-menu race intercepts eliminated**
 - Close t=150ms (opacity ≈ 0.01): 20 → 1
 - Close t=250ms (opacity = 0, settled): 17 → 1
+
+Cluster-collapse probe — `mulgo-screen.html`, 411 labels, depth=element, label-mode=Full:
+
+- v2.3.0: 314 visible labels, **45 overlapping pairs**, worst refs participate in 4 overlaps each
+- v2.3.1: 273 visible labels + 41 clustered into 21 `+N` badges, **0 overlapping pairs**
+- Icons mode (`L=0`): 235 visible + 79 clustered into 40 badges
+- L cycle (Full → Off → Icons): badge count 21 → 0 → 40, zero stale badges across transitions
+- T cycle (Section → Element): badge count 35 → 41, zero duplicates per owner
+- Popover row click copies the clustered ref value to clipboard (verified via `navigator.clipboard.writeText` shim)
 
 Demo page (`test/demo.html`): click-to-copy verified on a visible icon (`test-demo.html-18-button` → toast "Copied:" fires). Label-mode cycling (L), depth cycling (T), and outline cycling (O) unchanged. WP build (`npm run build:wp`) produces `dist/seguru-debug-toolbar-wp-v2.3.1.zip` (28 KB compressed).
 
