@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<!--
+  Fixture: non-block-bearing section (§2.1.1 — no block children)
+  All refs are section or element class. No block-type refs present.
+  Expected behaviour:
+    - Each [data-ref] classified: section or element
+    - Level filter "Sections only" → only hf-header and hf-hero visible
+    - Level filter "Sec+Blk" → same (no blocks to show/hide)
+    - No block group collapse badge (no blocks)
+    - Active-ref tree for element ref shows 2-row chain: section + element
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SDT v2.4.0 — Non-block-bearing fixture</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; }
+    [data-ref] { position: relative; padding: 20px; }
+    .section { border: 2px solid #ddd; margin: 10px; min-height: 120px; }
+    .element  { border: 1px dashed #aaa; margin: 8px; display: inline-block; padding: 8px; }
+  </style>
+</head>
+<body>
+  <!-- Section refs: 2-segment grammar hf-{section} -->
+  <section class="section" data-ref="hf-header">
+    <h1 class="element" data-ref="hf-header-heading-01-01-primary">Primary heading</h1>
+    <a class="element" data-ref="hf-header-cta-01-01-primary">Get started</a>
+  </section>
+
+  <section class="section" data-ref="hf-hero">
+    <h2 class="element" data-ref="hf-hero-heading-01-01-hero">Hero headline</h2>
+    <p class="element" data-ref="hf-hero-text-01-01-body">Hero body copy lorem ipsum.</p>
+    <img class="element" data-ref="hf-hero-image-01-01-hero" src="" alt="Hero image">
+  </section>
+
+  <script src="../../dist/seguru-debug-toolbar.js"></script>
+  <script>
+    window.seguruDebugConfig = { startHidden: false, defaultMode: 2 };
+  </script>
+</body>
+</html>

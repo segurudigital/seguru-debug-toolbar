@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<!--
+  Fixture: block-bearing section with ≤ 6 blocks (no collapse)
+  Expected behaviour:
+    - Section classified as section
+    - Block refs classified as block
+    - Element refs classified as element
+    - Level filter "Sections only" → only hf-hero visible
+    - Level filter "Sec+Blk" → section + 3 block refs visible
+    - NO block group collapse badge (≤ 6 blocks, threshold not reached)
+    - Active-ref tree for element ref shows 3-row chain: section + block + element
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SDT v2.4.0 — Block-bearing small fixture</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; }
+    [data-ref] { position: relative; padding: 16px; }
+    .section  { border: 2px solid #ddd; margin: 10px; min-height: 180px; }
+    .block    { border: 1px solid #ea580c33; margin: 8px; padding: 12px; background: #fff7ed; }
+    .element  { border: 1px dashed #aaa; margin: 6px; display: inline-block; padding: 6px; }
+  </style>
+</head>
+<body>
+  <!-- Section: hf-hero (block-bearing) -->
+  <section class="section" data-ref="hf-hero">
+
+    <!-- Block: card-01, card-02, card-03 — 3 blocks, no collapse -->
+    <div class="block" data-ref="hf-hero-card-01">
+      <h3 class="element" data-ref="hf-hero-heading-01-01-card">Card 1 heading</h3>
+      <p  class="element" data-ref="hf-hero-text-01-01-body">Card 1 body.</p>
+      <a  class="element" data-ref="hf-hero-cta-01-01-primary">Card 1 CTA</a>
+    </div>
+
+    <div class="block" data-ref="hf-hero-card-02">
+      <h3 class="element" data-ref="hf-hero-heading-02-01-card">Card 2 heading</h3>
+      <p  class="element" data-ref="hf-hero-text-02-01-body">Card 2 body.</p>
+    </div>
+
+    <div class="block" data-ref="hf-hero-card-03">
+      <h3 class="element" data-ref="hf-hero-heading-03-01-card">Card 3 heading</h3>
+      <img class="element" data-ref="hf-hero-image-03-01-card" src="" alt="Card 3 image">
+    </div>
+
+  </section>
+
+  <script src="../../dist/seguru-debug-toolbar.js"></script>
+  <script>
+    window.seguruDebugConfig = { startHidden: false, defaultMode: 2 };
+  </script>
+</body>
+</html>

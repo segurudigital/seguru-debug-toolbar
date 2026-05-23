@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<!--
+  Fixture: block-bearing section with > 6 blocks (triggers collapse)
+  Expected behaviour:
+    - Section classified as section
+    - 8 block refs classified as block
+    - Level filter "All" (default) → block group collapse badge "+8 blocks" on section
+    - Level filter "Sec+Blk" → collapse badge hidden, all 8 blocks visible individually
+    - Level filter "Sections only" → only section label visible
+    - Hover block group badge → popover lists each block ref with type + ref value
+    - Section pill itself is never collapsed (spec §12.4)
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SDT v2.4.0 — Block-bearing dense fixture</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; }
+    [data-ref] { position: relative; padding: 12px; }
+    .section  { border: 2px solid #ddd; margin: 10px; padding: 10px; }
+    .block    { border: 1px solid #ea580c33; margin: 6px; padding: 10px; background: #fff7ed; float: left; width: 120px; }
+    .clearfix::after { content: ''; display: table; clear: both; }
+    .element  { border: 1px dashed #aaa; margin: 4px; display: block; padding: 4px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <!-- Section: hf-services — 8 card blocks (> 6, triggers collapse in All mode) -->
+  <section class="section clearfix" data-ref="hf-services">
+
+    <div class="block" data-ref="hf-services-card-01">
+      <h3 class="element" data-ref="hf-services-heading-01-01-card">Service 1</h3>
+    </div>
+    <div class="block" data-ref="hf-services-card-02">
+      <h3 class="element" data-ref="hf-services-heading-02-01-card">Service 2</h3>
+    </div>
+    <div class="block" data-ref="hf-services-card-03">
+      <h3 class="element" data-ref="hf-services-heading-03-01-card">Service 3</h3>
+    </div>
+    <div class="block" data-ref="hf-services-card-04">
+      <h3 class="element" data-ref="hf-services-heading-04-01-card">Service 4</h3>
+    </div>
+    <div class="block" data-ref="hf-services-card-05">
+      <h3 class="element" data-ref="hf-services-heading-05-01-card">Service 5</h3>
+    </div>
+    <div class="block" data-ref="hf-services-card-06">
+      <h3 class="element" data-ref="hf-services-heading-06-01-card">Service 6</h3>
+    </div>
+    <div class="block" data-ref="hf-services-card-07">
+      <h3 class="element" data-ref="hf-services-heading-07-01-card">Service 7</h3>
+    </div>
+    <div class="block" data-ref="hf-services-card-08">
+      <h3 class="element" data-ref="hf-services-heading-08-01-card">Service 8</h3>
+    </div>
+
+  </section>
+
+  <script src="../../dist/seguru-debug-toolbar.js"></script>
+  <script>
+    window.seguruDebugConfig = { startHidden: false, defaultMode: 2 };
+  </script>
+</body>
+</html>

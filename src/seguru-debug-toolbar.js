@@ -40,7 +40,7 @@
   // Single source of truth for the bundled version string. Exposed via
   // `seguruDebugToolbar.version` and emitted in the `sdt:ready` event detail.
   // Kept in sync with package.json on release.
-  var SDT_VERSION = '2.3.1';
+  var SDT_VERSION = '2.4.0';
 
   // ─── Configuration ──────────────────────────────────────────
   var ACCENT = '234, 88, 12';        // orange — functional UI accent
@@ -50,6 +50,56 @@
   var SEGURU_BLUE = '#00C0F3';       // brand primary — badge only
   var FONT_MONO = "'SF Mono', 'Fira Code', 'Cascadia Code', monospace";
   var FONT_UI = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
+  // ─── data-ref v5.0 grammar classifier ───────────────────────
+  // page-abbreviations may contain hyphens (e.g. mpt-v2, mpt-def-110),
+  // so total segment count alone cannot determine grammar class. Instead
+  // we inspect the *tail* segments whose positions are fixed by the spec.
+  //
+  // Element  (§2.1): segs[-4] ∈ ELEMENT_NOUNS, segs[-3] /^\d{2}$/ (NN),
+  //                  segs[-2] /^\d{2}$/ (instance), segs[-1] non-numeric (role-token), len ≥ 6
+  // Block    (§2.1): segs[-2] ∈ BLOCK_TYPES, segs[-1] /^\d{2}$/ (NN), len ≥ 4
+  // Section  (§2.1): segs[-1] non-numeric, len ≥ 2 (fallthrough)
+  // Unclassified: everything else (malformed — rendered but flagged)
+  var BLOCK_TYPES = {
+    card: 1, row: 1, item: 1, tab: 1, slide: 1,
+    step: 1, cell: 1, column: 1, panel: 1, quote: 1, entry: 1
+  };
+  var ELEMENT_NOUNS = {
+    heading: 1, text: 1, image: 1, cta: 1, media: 1, link: 1, wrapper: 1
+  };
+
+  function classifyDataRef(ref) {
+    if (!ref || typeof ref !== 'string') return 'unclassified';
+    var segs = ref.split('-');
+    var len = segs.length;
+    if (len < 2) return 'unclassified';
+    var twoDigit = /^\d{2}$/;
+    var numeric = /^\d+$/;
+    // Element check — needs at least 6 segments
+    if (len >= 6) {
+      var s1 = segs[len - 1]; // role-token: non-numeric
+      var s2 = segs[len - 2]; // instance: /^\d{2}$/
+      var s3 = segs[len - 3]; // NN: /^\d{2}$/
+      var s4 = segs[len - 4]; // element noun
+      if (!numeric.test(s1) && twoDigit.test(s2) && twoDigit.test(s3) && ELEMENT_NOUNS[s4]) {
+        return 'element';
+      }
+    }
+    // Block check — needs at least 4 segments
+    if (len >= 4) {
+      var bNN = segs[len - 1];  // NN: /^\d{2}$/
+      var bType = segs[len - 2]; // block-type in vocabulary
+      if (twoDigit.test(bNN) && BLOCK_TYPES[bType]) {
+        return 'block';
+      }
+    }
+    // Section check — last seg non-numeric, at least 2 segs
+    if (!numeric.test(segs[len - 1])) {
+      return 'section';
+    }
+    return 'unclassified';
+  }
 
   // Seguru S mark — inline SVG derived from Seguru-Favicon-Blue.svg
   // 20px circle, blue bg, white mark. Slightly larger than the 18px user-pill
@@ -132,7 +182,7 @@
 
   // Merge: pageConfig > wpConfig > scriptConfig
   var config = {};
-  var _keys = ['defaultMode', 'classConverter', 'autoRef', 'autoRefDepth', 'outlineMode', 'position', 'pageSlug', 'startHidden', 'hotkey', 'theme', 'dock', 'user'];
+  var _keys = ['defaultMode', 'classConverter', 'autoRef', 'autoRefDepth', 'outlineMode', 'levelFilter', 'position', 'pageSlug', 'startHidden', 'hotkey', 'theme', 'dock', 'user'];
   for (var _i = 0; _i < _keys.length; _i++) {
     var _k = _keys[_i];
     if (_k in pageConfig) config[_k] = pageConfig[_k];
@@ -153,6 +203,7 @@
   var autoRefEnabled = !(config.autoRef === '0' || config.autoRef === false);
   var autoRefDepth = config.autoRefDepth || 'element'; // section | block | element (default element)
   var outlineMode = config.outlineMode || 'off'; // off | section | block
+  var levelFilter = config.levelFilter || 'all'; // all | section | section-block
 
   // Presentation mode — visibility hotkey toggles toolbar + label visibility.
   // Default ON so the toolbar stays out of screenshots, Chrome debug sessions
@@ -244,6 +295,14 @@
     'bottom-left':  'bottom:64px;left:20px;right:auto;',
     'top-right':    'top:64px;bottom:auto;right:20px;',
     'top-left':     'top:64px;bottom:auto;left:20px;right:auto;'
+  };
+  // Active-ref tree anchors at the opposite vertical edge so it never
+  // overlaps the toolbar. Same horizontal side as the toolbar.
+  var activeRefTreePosMap = {
+    'bottom-right': 'top:20px;right:20px;',
+    'bottom-left':  'top:20px;left:20px;right:auto;',
+    'top-right':    'bottom:20px;top:auto;right:20px;',
+    'top-left':     'bottom:20px;top:auto;left:20px;right:auto;'
   };
 
   // ─── Label CSS (injected into main document) ───────────────
@@ -599,6 +658,118 @@
     '}',
     'body.sdt-hide .sdt-cluster-badge,',
     'body.sdt-presentation .sdt-cluster-badge {',
+    '  display: none !important;',
+    '}',
+
+    // --- Level filter: Sections only ---
+    // body.sdt-filter-section hides icons/labels/badges on non-section refs.
+    // The class is set on body by applyLevelFilter(); the sdt-ref-class-*
+    // classes are added to [data-ref] elements by injectLabels().
+    'body.sdt-filter-section [data-ref]:not(.sdt-ref-class-section) .sdt-ref-icon,',
+    'body.sdt-filter-section [data-ref]:not(.sdt-ref-class-section) .sdt-ref-full-label,',
+    'body.sdt-filter-section [data-ref]:not(.sdt-ref-class-section) .sdt-ref-tooltip,',
+    'body.sdt-filter-section [data-ref]:not(.sdt-ref-class-section) .sdt-cluster-badge {',
+    '  display: none !important;',
+    '}',
+
+    // --- Level filter: Sections + Blocks ---
+    'body.sdt-filter-section-block [data-ref]:not(.sdt-ref-class-section):not(.sdt-ref-class-block) .sdt-ref-icon,',
+    'body.sdt-filter-section-block [data-ref]:not(.sdt-ref-class-section):not(.sdt-ref-class-block) .sdt-ref-full-label,',
+    'body.sdt-filter-section-block [data-ref]:not(.sdt-ref-class-section):not(.sdt-ref-class-block) .sdt-ref-tooltip,',
+    'body.sdt-filter-section-block [data-ref]:not(.sdt-ref-class-section):not(.sdt-ref-class-block) .sdt-cluster-badge {',
+    '  display: none !important;',
+    '}',
+
+    // --- Block group collapse badge ---
+    // When a section has >6 block-class refs and level filter is "All",
+    // those blocks are collapsed. Their individual labels are hidden;
+    // a "+N blocks" badge is placed on the section instead.
+    '.sdt-ref-block-group-member .sdt-ref-icon,',
+    '.sdt-ref-block-group-member .sdt-ref-full-label,',
+    '.sdt-ref-block-group-member .sdt-ref-tooltip {',
+    '  display: none !important;',
+    '}',
+
+    '.sdt-block-group-badge {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  position: absolute;',
+    '  z-index: 92;',
+    '  font-family: ' + FONT_MONO + ';',
+    '  font-size: 10px;',
+    '  font-weight: 600;',
+    '  line-height: 1;',
+    '  padding: 3px 7px;',
+    '  border-radius: 999px;',
+    '  cursor: pointer;',
+    '  white-space: nowrap;',
+    '  user-select: none;',
+    '}',
+
+    '.sdt-block-group-badge.sdt-on-light {',
+    '  background: rgba(' + ACCENT + ', 0.12);',
+    '  color: ' + ACCENT_HEX + ';',
+    '}',
+
+    '.sdt-block-group-badge.sdt-on-dark {',
+    '  background: rgba(' + ACCENT_ON_DARK + ', 0.20);',
+    '  color: #FDBA74;',
+    '}',
+
+    '.sdt-block-group-popover {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: none;',
+    '  position: absolute;',
+    '  top: calc(100% + 4px);',
+    '  left: 0;',
+    '  background: #111827;',
+    '  border: 1px solid rgba(255,255,255,0.1);',
+    '  border-radius: 5px;',
+    '  padding: 4px 0;',
+    '  min-width: 180px;',
+    '  max-width: 280px;',
+    '  z-index: 93;',
+    '}',
+
+    '.sdt-block-group-badge:hover .sdt-block-group-popover { display: block; }',
+
+    '.sdt-block-group-item {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: flex;',
+    '  align-items: center;',
+    '  gap: 8px;',
+    '  padding: 4px 10px;',
+    '  cursor: pointer;',
+    '}',
+
+    '.sdt-block-group-item:hover { background: rgba(255,255,255,0.06); }',
+
+    '.sdt-block-group-item-type {',
+    '  all: initial;',
+    '  font-family: ' + FONT_UI + ';',
+    '  font-size: 9px;',
+    '  font-weight: 600;',
+    '  text-transform: uppercase;',
+    '  letter-spacing: 0.4px;',
+    '  color: rgba(' + ACCENT_ON_DARK + ', 0.75);',
+    '  white-space: nowrap;',
+    '}',
+
+    '.sdt-block-group-item-ref {',
+    '  all: initial;',
+    '  font-family: ' + FONT_MONO + ';',
+    '  font-size: 10px;',
+    '  color: #D1D5DB;',
+    '  white-space: nowrap;',
+    '  overflow: hidden;',
+    '  text-overflow: ellipsis;',
+    '  max-width: 200px;',
+    '}',
+
+    'body.sdt-hide .sdt-block-group-badge,',
+    'body.sdt-presentation .sdt-block-group-badge {',
     '  display: none !important;',
     '}',
 
@@ -1261,6 +1432,142 @@
     ':host-context(html.dark) .sdt-tree-copy:hover { background: #18181B; border-color: rgba(' + ACCENT_ON_DARK + ', 0.28); color: #FDBA74; }',
     ':host-context(html.dark) .sdt-tree-empty { color: #A1A1AA; }',
 
+    // ── Active-ref tree ──
+    // Fixed-corner panel showing the data-ref breadcrumb chain (section →
+    // block → element) when hovering any labelled [data-ref] element.
+    // Positioned at the opposite vertical edge from the toolbar so it
+    // never overlaps it. Position is updated by applyDockPosition().
+    '.sdt-active-ref-tree {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  position: fixed;',
+    '  top: 20px;',
+    '  right: 20px;',
+    '  z-index: 99998;',
+    '  background: #fff;',
+    '  border: 1px solid #E5E7EB;',
+    '  border-radius: 6px;',
+    '  box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06);',
+    '  font-family: ' + FONT_UI + ';',
+    '  font-size: 0.75rem;',
+    '  min-width: 200px;',
+    '  max-width: 340px;',
+    '  display: none;',
+    '  pointer-events: auto;',
+    '  overflow: hidden;',
+    '}',
+
+    '.sdt-active-ref-tree--open { display: block; }',
+
+    '.sdt-active-ref-tree__header {',
+    '  display: flex;',
+    '  align-items: center;',
+    '  justify-content: space-between;',
+    '  padding: 6px 8px 6px 10px;',
+    '  border-bottom: 1px solid #E5E7EB;',
+    '}',
+
+    '.sdt-active-ref-tree__title {',
+    '  all: initial;',
+    '  font-family: ' + FONT_UI + ';',
+    '  font-size: 0.625rem;',
+    '  font-weight: 600;',
+    '  text-transform: uppercase;',
+    '  letter-spacing: 0.4px;',
+    '  color: #9CA3AF;',
+    '}',
+
+    '.sdt-active-ref-tree__pin {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: flex;',
+    '  align-items: center;',
+    '  justify-content: center;',
+    '  width: 20px;',
+    '  height: 20px;',
+    '  border-radius: 4px;',
+    '  border: 1px solid transparent;',
+    '  background: transparent;',
+    '  color: #9CA3AF;',
+    '  font-size: 11px;',
+    '  cursor: pointer;',
+    '  font-family: ' + FONT_UI + ';',
+    '  transition: background 0.1s, color 0.1s, border-color 0.1s;',
+    '}',
+
+    '.sdt-active-ref-tree__pin:hover { background: #F3F4F6; border-color: #E5E7EB; color: #374151; }',
+
+    '.sdt-active-ref-tree__pin--active {',
+    '  background: ' + ACCENT_WASH + ';',
+    '  border-color: rgba(' + ACCENT + ', 0.22);',
+    '  color: ' + ACCENT_HEX + ';',
+    '}',
+
+    '.sdt-active-ref-tree__rows {',
+    '  padding: 4px 0;',
+    '}',
+
+    '.sdt-active-ref-tree__row {',
+    '  all: initial;',
+    '  box-sizing: border-box;',
+    '  display: flex;',
+    '  align-items: center;',
+    '  gap: 8px;',
+    '  padding: 5px 10px;',
+    '  cursor: pointer;',
+    '  font-family: ' + FONT_UI + ';',
+    '  transition: background 0.08s;',
+    '}',
+
+    '.sdt-active-ref-tree__row:hover { background: #F9FAFB; }',
+
+    '.sdt-active-ref-tree__row--current {',
+    '  background: ' + ACCENT_WASH + ';',
+    '}',
+
+    '.sdt-active-ref-tree__row--current:hover { background: rgba(' + ACCENT + ', 0.12); }',
+
+    '.sdt-active-ref-tree__row-class {',
+    '  all: initial;',
+    '  font-family: ' + FONT_UI + ';',
+    '  font-size: 9px;',
+    '  font-weight: 600;',
+    '  text-transform: uppercase;',
+    '  letter-spacing: 0.4px;',
+    '  color: #9CA3AF;',
+    '  white-space: nowrap;',
+    '  width: 46px;',
+    '  flex-shrink: 0;',
+    '}',
+
+    '.sdt-active-ref-tree__row--current .sdt-active-ref-tree__row-class { color: ' + ACCENT_HEX + '; }',
+
+    '.sdt-active-ref-tree__row-ref {',
+    '  all: initial;',
+    '  font-family: ' + FONT_MONO + ';',
+    '  font-size: 0.688rem;',
+    '  color: #374151;',
+    '  flex: 1;',
+    '  overflow: hidden;',
+    '  text-overflow: ellipsis;',
+    '  white-space: nowrap;',
+    '}',
+
+    '.sdt-active-ref-tree__row--current .sdt-active-ref-tree__row-ref { color: ' + ACCENT_HEX + '; font-weight: 600; }',
+
+    // Dark mode — active-ref tree
+    ':host-context(html.dark) .sdt-active-ref-tree { background: #27272A; border-color: #3F3F46; }',
+    ':host-context(html.dark) .sdt-active-ref-tree__header { border-bottom-color: #3F3F46; }',
+    ':host-context(html.dark) .sdt-active-ref-tree__title { color: #71717A; }',
+    ':host-context(html.dark) .sdt-active-ref-tree__pin { color: #71717A; }',
+    ':host-context(html.dark) .sdt-active-ref-tree__pin:hover { background: #18181B; border-color: #3F3F46; color: #A1A1AA; }',
+    ':host-context(html.dark) .sdt-active-ref-tree__pin--active { background: rgba(' + ACCENT + ', 0.12); border-color: rgba(' + ACCENT_ON_DARK + ', 0.34); color: #FDBA74; }',
+    ':host-context(html.dark) .sdt-active-ref-tree__row:hover { background: rgba(255,255,255,0.04); }',
+    ':host-context(html.dark) .sdt-active-ref-tree__row--current { background: rgba(' + ACCENT + ', 0.10); }',
+    ':host-context(html.dark) .sdt-active-ref-tree__row-ref { color: #D1D5DB; }',
+    ':host-context(html.dark) .sdt-active-ref-tree__row--current .sdt-active-ref-tree__row-ref { color: #FDBA74; }',
+    ':host-context(html.dark) .sdt-active-ref-tree__row--current .sdt-active-ref-tree__row-class { color: #FDBA74; }',
+
   ].join('\n');
 
   // Mirror every `:host-context(html.dark)` rule with a `:host(.sdt-theme-dark)`
@@ -1279,9 +1586,11 @@
   var MODE_LABELS = { 0: 'Icons', 1: 'Off', 2: 'Full' };
   var DEPTH_LABELS = { 'off': 'Off', 'section': 'Sections', 'block': 'Blocks', 'element': 'Elements' };
   var OUTLINE_LABELS = { 'off': 'Off', 'section': 'Sections', 'block': 'Blocks' };
+  var LEVEL_LABELS = { 'all': 'All', 'section': 'Sections', 'section-block': 'Sec+Blk' };
   var initModeLabel = MODE_LABELS[state] || 'Icons';
   var initDepthLabel = autoRefEnabled ? (DEPTH_LABELS[autoRefDepth] || 'Sections') : 'Off';
   var initOutlineLabel = OUTLINE_LABELS[outlineMode] || 'Off';
+  var initLevelFilterLabel = LEVEL_LABELS[levelFilter] || 'All';
 
   // ─── Build toolbar DOM ──────────────────────────────────────
   var toolbar = document.createElement('div');
@@ -1342,6 +1651,28 @@
           '</button>' +
           '<button class="sdt-toolbar__option' + (!autoRefEnabled ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="off">' +
             '<span class="sdt-toolbar__option-dot"></span> Off — manual labels only' +
+          '</button>' +
+        '</div>' +
+      '</div>' +
+      // ── Level filter dropdown ──
+      // Controls which grammar classes are shown: All (default), Sections only,
+      // Sections + Blocks. Filters by sdt-ref-class-* applied in injectLabels().
+      '<div class="sdt-toolbar__group sdt-toolbar__group--primary" data-sdt-group="level">' +
+        '<button class="sdt-toolbar__select' + (levelFilter !== 'all' ? ' sdt-toolbar__select--active' : '') + '" data-sdt-toggle="level">' +
+          '<span class="sdt-toolbar__key">Level</span>' +
+          '<span class="sdt-toolbar__value">' + initLevelFilterLabel + '</span>' +
+          '<span class="sdt-toolbar__caret">&#9662;</span>' +
+        '</button>' +
+        '<div class="sdt-toolbar__dropdown" data-sdt-menu="level">' +
+          '<div class="sdt-toolbar__hint">Press F to cycle</div>' +
+          '<button class="sdt-toolbar__option' + (levelFilter === 'all' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-level="all">' +
+            '<span class="sdt-toolbar__option-dot"></span> All — sections, blocks, elements' +
+          '</button>' +
+          '<button class="sdt-toolbar__option' + (levelFilter === 'section-block' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-level="section-block">' +
+            '<span class="sdt-toolbar__option-dot"></span> Sec + Blk — sections and blocks' +
+          '</button>' +
+          '<button class="sdt-toolbar__option' + (levelFilter === 'section' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-level="section">' +
+            '<span class="sdt-toolbar__option-dot"></span> Sections — top-level sections only' +
           '</button>' +
         '</div>' +
       '</div>' +
@@ -1794,7 +2125,133 @@
   }
 
 
-  // ─── Label injection ────────────────────────────────────────
+  // Level filter management
+  var LEVEL_FILTER_CYCLE = ['all', 'section-block', 'section'];
+
+  function applyLevelFilter() {
+    document.body.classList.remove('sdt-filter-section', 'sdt-filter-section-block');
+    if (levelFilter === 'section') {
+      document.body.classList.add('sdt-filter-section');
+    } else if (levelFilter === 'section-block') {
+      document.body.classList.add('sdt-filter-section-block');
+    }
+    resolveLabelOverlaps();
+  }
+
+  function setLevelFilter(value) {
+    if (!LEVEL_LABELS[value]) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[seguru-debug-toolbar] setLevelFilter expected all/section/section-block, got', value);
+      }
+      return;
+    }
+    levelFilter = value;
+    applyLevelFilter();
+    updateDropdown('level', 'data-sdt-level', levelFilter, LEVEL_LABELS[levelFilter]);
+    emitEvent('level-filter-change', { levelFilter: levelFilter });
+  }
+
+
+  // Block group collapse — Deliverable 4
+  // When levelFilter is 'all' and a section has more than 6 direct-child
+  // block-class refs, those blocks are collapsed into a "+N blocks" badge
+  // on the section. "Direct-child" means no intervening sdt-ref-class-section
+  // ancestor between the block and this section.
+
+  function getDirectBlockRefs(sectionEl) {
+    var blocks = [];
+    var allRefs = toArray(sectionEl.querySelectorAll('[data-ref]'));
+    for (var i = 0; i < allRefs.length; i++) {
+      var ref = allRefs[i];
+      if (!ref.classList.contains('sdt-ref-class-block')) continue;
+      var parent = ref.parentElement;
+      var direct = true;
+      while (parent && parent !== sectionEl) {
+        if (parent.classList && parent.classList.contains('sdt-ref-class-section')) {
+          direct = false;
+          break;
+        }
+        parent = parent.parentElement;
+      }
+      if (direct) blocks.push(ref);
+    }
+    return blocks;
+  }
+
+  function clearBlockGroupCollapse() {
+    var members = document.querySelectorAll('.sdt-ref-block-group-member');
+    forEachNode(members, function (el) {
+      el.classList.remove('sdt-ref-block-group-member');
+      el._sdtBlockGroupMember = false;
+    });
+    var badges = document.querySelectorAll('.sdt-block-group-badge');
+    forEachNode(badges, function (b) { b.parentNode && b.parentNode.removeChild(b); });
+    var owners = document.querySelectorAll('[data-ref]');
+    forEachNode(owners, function (el) { el._sdtBlockGroupBadge = null; });
+  }
+
+  function applyBlockGroupCollapse() {
+    var sections = document.querySelectorAll('[data-ref].sdt-ref-class-section');
+    forEachNode(sections, function (sectionEl) {
+      var blocks = getDirectBlockRefs(sectionEl);
+      if (blocks.length <= 6) return;
+
+      var bgLum = getEffectiveBgLuminance(sectionEl);
+      var bgClass = bgLum < 0.40 ? 'sdt-on-dark' : 'sdt-on-light';
+
+      var badge = document.createElement('span');
+      badge.className = 'sdt-block-group-badge ' + bgClass;
+      badge.textContent = '+' + blocks.length + ' blocks';
+
+      // Position the badge near the section's active label
+      var anchor = getActiveLabel(sectionEl);
+      var anchorTop = anchor ? (parseFloat(anchor.style.top || '2') + 20) : 22;
+      var anchorLeft = anchor ? parseFloat(anchor.style.left || '2') : 2;
+      badge.style.top = anchorTop + 'px';
+      badge.style.left = anchorLeft + 'px';
+
+      // Popover listing each block ref
+      var popover = document.createElement('span');
+      popover.className = 'sdt-block-group-popover';
+      for (var i = 0; i < blocks.length; i++) {
+        var member = blocks[i];
+        var memberRef = member.getAttribute('data-ref');
+        var memberSegs = memberRef.split('-');
+        var blockType = memberSegs.length >= 2 ? memberSegs[memberSegs.length - 2] : 'block';
+        var row = document.createElement('span');
+        row.className = 'sdt-block-group-item';
+        var typeSpan = document.createElement('span');
+        typeSpan.className = 'sdt-block-group-item-type';
+        typeSpan.textContent = blockType;
+        var refSpan = document.createElement('span');
+        refSpan.className = 'sdt-block-group-item-ref';
+        refSpan.textContent = memberRef;
+        row.appendChild(typeSpan);
+        row.appendChild(refSpan);
+        (function (refVal, refEl, rowEl) {
+          rowEl.addEventListener('click', function (e) {
+            e.stopPropagation();
+            e.preventDefault();
+            copyRef(refVal);
+            emitEvent('dataref-click', { dataRef: refVal, element: refEl, current: rowEl });
+          });
+        }(memberRef, member, row));
+        popover.appendChild(row);
+      }
+      badge.appendChild(popover);
+      sectionEl.appendChild(badge);
+      sectionEl._sdtBlockGroupBadge = badge;
+
+      // Mark block members so the overlap solver skips them
+      for (var j = 0; j < blocks.length; j++) {
+        blocks[j]._sdtBlockGroupMember = true;
+        blocks[j].classList.add('sdt-ref-block-group-member');
+      }
+    });
+  }
+
+
+  // Label injection
   var MARKER = '_sdtLabelled';
   var LABEL_BASE_TOP = 2;
   var LABEL_COLLISION_GAP = 4;
@@ -1872,7 +2329,13 @@
 
     resetLabelOffsets();
     clearClusters();
+    clearBlockGroupCollapse();
     if (presentationMode || state === 1) return;
+
+    // Block group collapse: sections with >6 direct block children when
+    // level filter is All. Must run before the placement loop so collapsed
+    // block labels don't consume collision slots.
+    if (levelFilter === 'all') applyBlockGroupCollapse();
 
     refs = toArray(document.querySelectorAll('[data-ref]'));
     refs.sort(function (a, b) {
@@ -1886,6 +2349,10 @@
       // they shouldn't consume collision slots — otherwise hidden mega-menu
       // labels would push visible labels around.
       if (el._sdtVisible === false) return;
+
+      // Skip block-group-collapsed members — their labels are hidden by CSS
+      // and they must not participate in collision detection.
+      if (el._sdtBlockGroupMember) return;
 
       var anchor = getActiveLabel(el);
       var attempt;
@@ -2037,6 +2504,15 @@
       var refValue = el.getAttribute('data-ref');
       var elContext = getElementContext(el);
 
+      // Classify by data-ref v5.0 grammar and stamp the class on the
+      // element so CSS level-filter rules and block group collapse can
+      // target it without re-running the parser.
+      var refClass = classifyDataRef(refValue);
+      el.classList.add('sdt-ref-class-' + refClass);
+      if (refClass === 'unclassified' && typeof console !== 'undefined' && console.warn) {
+        console.warn('[seguru-debug-toolbar] unclassified data-ref:', refValue);
+      }
+
       // Adaptive background class
       var lum = getEffectiveBgLuminance(el);
       var bgClass = lum < 0.40 ? 'sdt-on-dark' : 'sdt-on-light';
@@ -2179,6 +2655,7 @@
     if (name === 'mode') return String(activeValue) !== '1';
     if (name === 'depth') return String(activeValue) !== 'off';
     if (name === 'outline') return String(activeValue) !== 'off';
+    if (name === 'level') return String(activeValue) !== 'all';
     return false;
   }
 
@@ -2203,6 +2680,15 @@
   var treeJumpTarget = null;
   var treePanel = document.createElement('div');
   treePanel.className = 'sdt-tree-panel';
+
+  // Active-ref tree panel — shows data-ref breadcrumb chain on hover.
+  // Positioned at the opposite vertical edge from the toolbar.
+  // Can be pinned to stay open; Escape closes it when unpinned.
+  var activeRefTreeOpen = false;
+  var activeRefTreePinned = false;
+  var activeRefTreeHideTimer = null;
+  var activeRefTree = document.createElement('div');
+  activeRefTree.className = 'sdt-active-ref-tree';
 
   function clearTreeJumpHighlight() {
     if (treeJumpTimer) {
@@ -2407,6 +2893,114 @@
   }
 
 
+  // Active-ref tree panel functions.
+  // Walk the DOM upwards from el to collect [data-ref] ancestors, then
+  // include el. Returns an array in document order (outermost first).
+  function buildRefBreadcrumb(el) {
+    var chain = [];
+    var cur = el.parentElement;
+    while (cur) {
+      if (cur.hasAttribute && cur.hasAttribute('data-ref')) {
+        chain.unshift({
+          el: cur,
+          ref: cur.getAttribute('data-ref'),
+          refClass: classifyDataRef(cur.getAttribute('data-ref')),
+          current: false
+        });
+      }
+      cur = cur.parentElement;
+    }
+    chain.push({
+      el: el,
+      ref: el.getAttribute('data-ref'),
+      refClass: classifyDataRef(el.getAttribute('data-ref')),
+      current: true
+    });
+    return chain;
+  }
+
+  function buildActiveRefTree(dataRef, el) {
+    var chain = buildRefBreadcrumb(el);
+    activeRefTree.innerHTML = '';
+
+    var header = document.createElement('div');
+    header.className = 'sdt-active-ref-tree__header';
+    var titleEl = document.createElement('span');
+    titleEl.className = 'sdt-active-ref-tree__title';
+    titleEl.textContent = 'Context';
+    var pinBtn = document.createElement('button');
+    pinBtn.type = 'button';
+    pinBtn.className = 'sdt-active-ref-tree__pin' + (activeRefTreePinned ? ' sdt-active-ref-tree__pin--active' : '');
+    pinBtn.title = activeRefTreePinned ? 'Unpin' : 'Pin open';
+    pinBtn.textContent = '\u{1F4CC}';
+    pinBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      activeRefTreePinned = !activeRefTreePinned;
+      pinBtn.classList.toggle('sdt-active-ref-tree__pin--active', activeRefTreePinned);
+      pinBtn.title = activeRefTreePinned ? 'Unpin' : 'Pin open';
+    });
+    header.appendChild(titleEl);
+    header.appendChild(pinBtn);
+    activeRefTree.appendChild(header);
+
+    var rowsEl = document.createElement('div');
+    rowsEl.className = 'sdt-active-ref-tree__rows';
+    for (var i = 0; i < chain.length; i++) {
+      var item = chain[i];
+      var row = document.createElement('div');
+      row.className = 'sdt-active-ref-tree__row' + (item.current ? ' sdt-active-ref-tree__row--current' : '');
+      row.title = 'Click to copy: ' + item.ref;
+      var classLabel = document.createElement('span');
+      classLabel.className = 'sdt-active-ref-tree__row-class';
+      classLabel.textContent = item.refClass;
+      var refLabel = document.createElement('span');
+      refLabel.className = 'sdt-active-ref-tree__row-ref';
+      refLabel.textContent = item.ref;
+      row.appendChild(classLabel);
+      row.appendChild(refLabel);
+      (function (refVal, refEl) {
+        row.addEventListener('click', function (e) {
+          e.stopPropagation();
+          copyRef(refVal);
+          emitEvent('dataref-click', { dataRef: refVal, element: refEl, current: row });
+        });
+      }(item.ref, item.el));
+      rowsEl.appendChild(row);
+    }
+    activeRefTree.appendChild(rowsEl);
+  }
+
+  function showActiveRefTree(detail) {
+    if (activeRefTreeHideTimer) {
+      clearTimeout(activeRefTreeHideTimer);
+      activeRefTreeHideTimer = null;
+    }
+    if (!detail || !detail.element || !detail.element.getAttribute('data-ref')) return;
+    buildActiveRefTree(detail.dataRef, detail.element);
+    activeRefTree.classList.add('sdt-active-ref-tree--open');
+    activeRefTreeOpen = true;
+  }
+
+  function hideActiveRefTree() {
+    if (activeRefTreePinned) return;
+    activeRefTreeHideTimer = setTimeout(function () {
+      activeRefTree.classList.remove('sdt-active-ref-tree--open');
+      activeRefTreeOpen = false;
+      activeRefTreeHideTimer = null;
+    }, 120);
+  }
+
+  function dismissActiveRefTree() {
+    activeRefTreePinned = false;
+    activeRefTree.classList.remove('sdt-active-ref-tree--open');
+    activeRefTreeOpen = false;
+    if (activeRefTreeHideTimer) {
+      clearTimeout(activeRefTreeHideTimer);
+      activeRefTreeHideTimer = null;
+    }
+  }
+
+
   // ─── Public events ──────────────────────────────────────────
   // Every documented public event is dispatched on `window` with the `sdt:`
   // prefix. Consumers listen with `window.addEventListener('sdt:<name>', ...)`.
@@ -2452,6 +3046,7 @@
     // function declarations defined later in this file and are safely hoisted.
     closeAllDropdowns();
     if (treeOpen) toggleTree();
+    dismissActiveRefTree();
     presentationMode = true;
     applyVisibility();
     emitEvent('hide', {});
@@ -2643,6 +3238,7 @@
     applyStyleSnippet(toolbar, posMap[position] || posMap['bottom-right']);
     applyStyleSnippet(toast, toastPosMap[position] || toastPosMap['bottom-right']);
     applyStyleSnippet(treePanel, treePanelPosMap[position] || treePanelPosMap['bottom-right']);
+    applyStyleSnippet(activeRefTree, activeRefTreePosMap[position] || activeRefTreePosMap['bottom-right']);
   }
 
   // Heuristic for `dock: 'auto'` — pick the corner least likely to collide
@@ -2751,6 +3347,7 @@
     shadow.appendChild(toolbar);
     shadow.appendChild(toast);
     shadow.appendChild(treePanel);
+    shadow.appendChild(activeRefTree);
 
     // Resolve `dock: 'auto'` once the DOM exists, then apply dock position via
     // inline styles so setDock() can update at runtime.
@@ -2778,6 +3375,7 @@
 
     if (state !== 0) setState(state);
     if (outlineMode !== 'off') setOutline(outlineMode);
+    if (levelFilter !== 'all') applyLevelFilter();
 
     // Apply initial visibility (hidden by default — press the visibility
     // hotkey to reveal). hide()/show() called pre-boot have already updated
@@ -2810,6 +3408,13 @@
     forEachNode(toolbar.querySelectorAll('[data-sdt-outline]'), function (opt) {
       opt.addEventListener('click', function () {
         setOutline(opt.getAttribute('data-sdt-outline'));
+      });
+    });
+
+    // Level filter option clicks
+    forEachNode(toolbar.querySelectorAll('[data-sdt-level]'), function (opt) {
+      opt.addEventListener('click', function () {
+        setLevelFilter(opt.getAttribute('data-sdt-level'));
       });
     });
 
@@ -2894,6 +3499,25 @@
         setOutline(OUTLINE_CYCLE[(oIdx + 1) % OUTLINE_CYCLE.length]);
         return;
       }
+
+      // F — cycle Level filter (All → Sec+Blk → Sections)
+      if (e.key === 'f' || e.key === 'F') {
+        var fIdx = LEVEL_FILTER_CYCLE.indexOf(levelFilter);
+        if (fIdx < 0) fIdx = 0;
+        setLevelFilter(LEVEL_FILTER_CYCLE[(fIdx + 1) % LEVEL_FILTER_CYCLE.length]);
+        return;
+      }
+    });
+
+    // Active-ref tree hover wiring via sdt:dataref-hover window event.
+    // Both icon mouseenter and fullLabel mouseenter fire this event, so the
+    // tree updates smoothly when moving between label variants on the same el.
+    window.addEventListener('sdt:dataref-hover', function (e) {
+      if (presentationMode || state === 1) return;
+      showActiveRefTree(e.detail);
+    });
+    window.addEventListener('sdt:dataref-leave', function () {
+      hideActiveRefTree();
     });
 
     window.addEventListener('resize', function () {
@@ -2955,13 +3579,9 @@
   // ─── Public API ─────────────────────────────────────────────
   // Existing API (setState/getState/setDepth/getDepth/setOutline/getOutline/
   // refresh/toggleTree) is preserved verbatim — documented and in use.
-  // Additions in this version:
-  //   - hide() / show() / toggle()  — canonical visibility lifecycle
-  //   - init(opts)                  — apply { hotkey, theme, dock, user }
-  //   - setHotkey() / setDock()
-  //   - setTheme() / getTheme()
-  //   - setUser() / getUser()
-  // All additions are non-breaking.
+  // v2.4.0 additions (non-breaking):
+  //   - setLevelFilter() / getLevelFilter()  — data-ref v5.0 level filter
+  //   - classifyDataRef()                    — exported classifier
   var api = {
     version: SDT_VERSION,
     setState: setState,
@@ -2976,6 +3596,7 @@
       injectLabels();
       resolveLabelOverlaps();
       applyOutlineMode();
+      applyLevelFilter();
       if (treeOpen) buildTreePanel();
     },
     toggleTree: toggleTree,
@@ -2996,6 +3617,11 @@
     // Dock
     setDock: setDock,
     getDock: function () { return position; },
+    // Level filter (v2.4.0 — data-ref v5.0)
+    setLevelFilter: setLevelFilter,
+    getLevelFilter: function () { return levelFilter; },
+    // Classifier (v2.4.0 — exposed so hosts can interrogate refs)
+    classifyDataRef: classifyDataRef,
     // Init
     init: publicInit
   };

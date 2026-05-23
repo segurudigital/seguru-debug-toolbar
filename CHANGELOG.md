@@ -10,6 +10,34 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ---
 
+## [2.4.0] — 2026-05-23
+
+Support for data-ref v5.0 three-level grammar (section / block / element). Four deliverables: a grammar classifier baked into `injectLabels`, a Level filter dropdown, a hover-triggered active-ref context tree, and block group collapse for dense sections.
+
+### Added
+
+- **`classifyDataRef(ref)`** — tail-of-segments parser that classifies any data-ref string as `section` (2-segment semantic tail), `block` (block-type from §4.4 vocabulary + 2-digit NN tail), `element` (element noun from §4.2 + two 2-digit index segments + role token), or `unclassified` (malformed — rendered with a console warning but never dropped). Exported on the public API as `seguruDebugToolbar.classifyDataRef()`. `BLOCK_TYPES` and `ELEMENT_NOUNS` vocabularies follow data-ref spec §4.4 and §4.2 respectively.
+- **Level filter dropdown** — third primary toolbar control. Three modes cycled by pressing **F**: "All" (default, existing behaviour), "Sec+Blk" (sections + blocks), "Sections" (sections only). Implemented via `body.sdt-filter-section` / `body.sdt-filter-section-block` CSS body-class pattern; each `[data-ref]` element receives `sdt-ref-class-{class}` from `injectLabels()` so filtering requires no DOM re-traversal. Public API: `setLevelFilter(value)` / `getLevelFilter()`. Config key: `levelFilter`. Emits `sdt:level-filter-change` event.
+- **Active-ref tree panel** — fixed-corner overlay that appears on `sdt:dataref-hover` (fired by icon/label `mouseenter`). Displays the full data-ref breadcrumb chain from outermost `[data-ref]` ancestor down to the hovered element, each row showing grammar class + ref value, click-to-copy. Positioned at the opposite vertical edge from the toolbar (bottom-right toolbar → tree at top-right) so it never overlaps controls or the existing Tree panel. Pin button locks it open; Escape / `hide()` dismisses. Dismisses automatically with a 120ms grace period when unpinned.
+- **Block group collapse badge** — when a section has more than 6 direct-child block-class refs and level filter is "All", those blocks are collapsed into a single orange `+N blocks` pill on the section element. Hovering the pill expands a popover listing each block's type and ref value, click-to-copy. Collapsed blocks are skipped by the overlap solver so they don't consume collision slots. Collapse does not activate when level filter is "Sec+Blk" or "Sections" (block pills are either individually visible or hidden by the filter — no redundant grouping).
+- **`sdt-ref-class-{section|block|element|unclassified}`** body-classes stamped on every `[data-ref]` element by `injectLabels()`. Used by level filter CSS, block group collapse, and the active-ref tree classifier.
+- **Test fixtures** in `test/fixtures/v5-data-ref/`: `non-block-bearing.html`, `block-bearing-small.html` (≤6 blocks, no collapse), `block-bearing-dense.html` (8 blocks, collapse), `mixed.html` (all patterns + v4.0 legacy refs + unclassified ref).
+
+### Changed
+
+- Toolbar primary cluster now shows Labels → Target → Level (three controls). Utility zone unchanged.
+- `resolveLabelOverlaps()` runs `clearBlockGroupCollapse()` + conditional `applyBlockGroupCollapse()` at the top of each pass, before the placement loop. Block-group members skip collision detection.
+- `refresh()` now calls `applyLevelFilter()` after `applyOutlineMode()`.
+- `hide()` now calls `dismissActiveRefTree()` so a single Esc/hide clears every secondary surface.
+- `applyDockPosition()` now applies `activeRefTreePosMap` to the active-ref tree element.
+- docs/design.md updated with Level filter, active-ref tree, and updated IA diagram (v1.5).
+
+### Backward Compatibility
+
+v4.0 pages continue to work unchanged. Their refs match the element classifier pattern (element noun in segs[-4], two 2-digit indices in segs[-3..−2], role token in segs[-1]). Section wrapper refs of the form `page-section-wrapper-NN-NN-role` also classify as element since `wrapper` is in `ELEMENT_NOUNS`. Level filter "Sections only" on a v4.0 page correctly shows nothing (those pages have no section-class refs — graceful degradation per spec §12.5).
+
+---
+
 ## [2.3.1] — 2026-05-21
 
 Two related fixes for ref-label crowding on dense pages, both surfaced from an EC cowork session against `https://expeditioncentre.local/Pages/mulgo/mulgo-screen.html` and `home-screen.html`:

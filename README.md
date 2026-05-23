@@ -10,7 +10,7 @@ Built and maintained by [Seguru Digital](https://seguru.digital), a strategy-fir
 
 ## What it does
 
-Add `data-ref` attributes to any HTML element. The toolbar gives you three dropdown controls plus the Tree button:
+Add `data-ref` attributes to any HTML element. The toolbar gives you four dropdown controls plus the Tree button:
 
 **Labels** (press **L** to cycle) — controls how labels appear:
 
@@ -30,6 +30,14 @@ Add `data-ref` attributes to any HTML element. The toolbar gives you three dropd
 | **Sections** | Top-level page sections (Elementor containers, Bricks sections, HTML5 `<section>` tags). |
 | **Blocks** | Sections + inner containers, widgets, and content blocks. |
 | **Elements** *(default)* | Sections + all semantic HTML (headings, paragraphs, images, buttons, forms, etc.). |
+
+**Level** (press **F** to cycle) — controls which data-ref grammar levels are shown. Requires data-ref v5.0 naming; v4.0 pages degrade gracefully (see [v5.0 data-ref support](#v50-data-ref-support)):
+
+| Level | What you see |
+|-------|--------------|
+| **All** *(default)* | All labelled elements — sections, blocks, and element-level refs. |
+| **Sec+Blk** | Sections and blocks only — element labels hidden. Good for structural QA. |
+| **Sections** | Top-level section refs only. Good for high-level page map reviews. |
 
 **Outline** — controls visual guide outlines for spacing and overlap QA:
 
@@ -75,7 +83,7 @@ We use it for wireframe QA, copy review, client revision rounds, and debugging b
 
 ## Install
 
-Current version: **v2.3.1** — see [CHANGELOG.md](CHANGELOG.md) for release notes.
+Current version: **v2.4.0** — see [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 **npm (React, Next, Vue, Svelte, any bundled app):**
 
@@ -201,6 +209,8 @@ The full API surface (callable any time after the script tag loads):
 | `setDock(value)` / `getDock()` | Dock corner |
 | `setUser(obj\|null)` / `getUser()` | Identity pill |
 | `toggleTree()` | Open / close the element-tree side panel |
+| `setLevelFilter(value)` / `getLevelFilter()` | Level filter (`all` / `section` / `section-block`) — v2.4.0 |
+| `classifyDataRef(ref)` | Classify a data-ref string as `section` / `block` / `element` / `unclassified` — v2.4.0 |
 | `refresh()` | Re-scan for new `[data-ref]` elements (SPAs / dynamic content) |
 
 ---
@@ -215,9 +225,10 @@ The full keymap, all bound at the document level:
 | `L` | Cycle **Labels** mode: Off → Icons → Full |
 | `T` | Cycle **Target** depth: Off → Sections → Blocks → Elements |
 | `O` | Cycle **Outline** mode: Off → Sections → Blocks |
-| `Esc` | **Global hide** — closes any open dropdown, the Tree panel, and dismisses the toolbar in one press |
+| `F` | Cycle **Level** filter: All → Sec+Blk → Sections |
+| `Esc` | **Global hide** — closes any open dropdown, the Tree panel, the active-ref tree, and dismisses the toolbar in one press |
 
-`L`, `T`, and `O` are fixed. `D` is the visibility hotkey and is configurable:
+`L`, `T`, `O`, and `F` are fixed. `D` is the visibility hotkey and is configurable:
 
 ```js
 sdt.init({ hotkey: 'V' });   // rebind to V
@@ -231,6 +242,58 @@ Accepts a single letter `A`–`Z` (case-insensitive) or `false` to disable. Anyt
 All bindings ignore key events while the user is typing in `<input>`, `<textarea>`, `<select>`, or `contenteditable` elements, and ignore key events when Cmd / Ctrl / Alt / Meta / Shift are held — so the toolbar never competes with form input or app-level shortcuts.
 
 > **Note** — picking `L`, `T`, or `O` as the visibility hotkey overrides the built-in cycle on that key, since the visibility binding takes priority. If you need both, pick a different letter (e.g. `V` for "view") for the visibility hotkey.
+
+---
+
+## v5.0 data-ref support
+
+SDT v2.4.0 understands the three-level grammar introduced in data-ref spec v5.0.
+
+### Grammar levels
+
+| Level | Pattern | Example |
+| ----- | ------- | ------- |
+| **section** | `<page-abbrev>-<section>` | `hf-hero` |
+| **block** | `<page-abbrev>-<section>-<block-type>-<NN>` | `hf-hero-card-01` |
+| **element** | `<page-abbrev>-<section>-<element>-<NN>-<instance>-<role>` | `hf-hero-heading-01-01-primary` |
+
+Page abbreviations may contain hyphens (`mpt-v2`, `mpt-def-110`) — the classifier inspects the tail segments rather than counting total hyphens, so multi-part page slugs work correctly.
+
+### Level filter
+
+Press **F** (or use the Level dropdown) to cycle between:
+
+- **All** — shows everything (default, existing behaviour)
+- **Sec+Blk** — hides element-level labels; useful during structural QA
+- **Sections** — hides blocks and elements; useful for high-level page map reviews
+
+```js
+sdt.setLevelFilter('all');           // all levels (default)
+sdt.setLevelFilter('section-block'); // sections + blocks
+sdt.setLevelFilter('section');       // sections only
+sdt.getLevelFilter();                // → 'all' | 'section-block' | 'section'
+```
+
+### Classify a ref programmatically
+
+```js
+sdt.classifyDataRef('hf-hero');                          // → 'section'
+sdt.classifyDataRef('hf-hero-card-01');                  // → 'block'
+sdt.classifyDataRef('hf-hero-heading-01-01-primary');    // → 'element'
+sdt.classifyDataRef('bad--ref');                         // → 'unclassified'
+```
+
+### Active-ref context tree
+
+Hovering any SDT label now opens a small panel in the opposite corner from the toolbar showing the full breadcrumb chain for the hovered element — outermost ancestor first, current element highlighted. Each row is click-to-copy. A pin button locks the panel open; **Esc** dismisses it.
+
+### Block group collapse
+
+On dense sections with more than 6 block-class refs, the individual block labels collapse into a single `+N blocks` badge on the section when Level is set to All. Switch to Sec+Blk to see the blocks listed individually.
+
+### v4.0 backward compatibility
+
+Pages using the v4.0 naming scheme continue to work unchanged. Their refs match the element classifier pattern and receive `sdt-ref-class-element`. Level filter "Sections only" on a v4.0 page shows nothing — which is correct, since v4.0 pages have no section-class refs — and this is the documented graceful degradation behaviour.
 
 ---
 
@@ -369,11 +432,12 @@ The toolbar only loads for administrators, so regular site visitors never see it
 - **Shadow DOM isolation** — toolbar renders in a shadow root, immune to page/builder CSS
 - **~58 KB minified** — still lightweight enough for front-end QA use
 - **Click-to-copy** — click any label, get the ref value on your clipboard
-- **Dropdown controls** — Labels, Target, and Outline as compact front-end menus
+- **Dropdown controls** — Labels, Target, Level, and Outline as compact front-end menus
 - **Outline guides** — optional section/block outlines with stronger section framing, lighter block guides, and dark-surface-aware contrast
 - **Collision-aware labels** — overlapping labels use depth-aware staggering and keep a visible leader line to their target; on dense pages, irresolvable collisions collapse into a single **+N** badge with a hover popover
 - **Hidden-ancestor suppression** — labels for refs inside `display:none` / `visibility:hidden` / `opacity:0` containers (closed mega menus, dropdowns, modals) are auto-hidden and can't intercept clicks on visible content; reappear live when the container opens
-- **Keyboard shortcuts** — L cycles Labels, T cycles Target, O cycles Outline, D toggles toolbar visibility (configurable), Esc dismisses everything (skips input fields and modifier-key combos)
+- **data-ref v5.0 support** — grammar classifier (`section` / `block` / `element`), level filter control, active-ref context tree on hover, block group collapse for dense sections
+- **Keyboard shortcuts** — L cycles Labels, T cycles Target, O cycles Outline, F cycles Level filter, D toggles toolbar visibility (configurable), Esc dismisses everything (skips input fields and modifier-key combos)
 - **Presentation mode** — H key hides toolbar + all labels for clean screenshots and client demos
 - **Tree panel** — floating element tree with nesting, context chips, hover-to-highlight, row click-to-jump, and per-row copy
 - **Adaptive label colours** — labels automatically invert on dark-background sections

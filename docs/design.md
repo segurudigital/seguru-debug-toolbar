@@ -1,7 +1,7 @@
 # Design — IA & UI Spec
 
-**Version:** 1.4
-**Last updated:** 2026-04-11
+**Version:** 1.5
+**Last updated:** 2026-05-23
 
 **Brand authority:** Seguru-Brand-Handbook.md §10 (Product Brand: Seguru Debug Toolbar) — v4.2, April 2026. All colour decisions in this document are formally ratified there. When the handbook and this doc conflict, the handbook wins.
 
@@ -13,11 +13,11 @@ The toolbar has two jobs: show `data-ref` labels and connect back to Seguru as t
 
 ### Content zones (left to right)
 
-```
-┌────────────────────────────────────────────────────────────────────────────┐
-│ [S] [user?]  [Labels Icons ▾] [Target Off ▾]  │  [Outline Off ▾] [⊞ Tree] │
-│      primary controls                  │  utility controls                │
-└────────────────────────────────────────────────────────────────────────────┘
+```text
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│ [S] [user?]  [Labels Icons ▾] [Target Off ▾] [Level All ▾]  │  [Outline Off ▾] [⊞ Tree] │
+│      primary controls                                │  utility controls                │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **Badge zone** — The Seguru S mark (20px circle, always Seguru Primary Blue `#00C0F3`, white mark, symmetric padding) sits at the far left. On hover, a tooltip reads "Powered by Seguru Digital". Clicking opens seguru.digital in a new tab. As of v2.3.0 the badge is paired with an optional **identity pill** to its right (avatar + name + role) rendered when the host calls `setUser()`. The pill avatar uses neutral slate so the S badge stays the only Seguru-blue mark in the chrome.
@@ -30,7 +30,9 @@ The toolbar has two jobs: show `data-ref` labels and connect back to Seguru as t
 
 **Tree button** — Opens the floating element tree panel for list-based inspection, click-to-jump navigation, and copy actions. This also lives in the utility zone and should visually read as secondary to Labels and Target.
 
-**Visibility hotkey** — Press **D** to show / hide the toolbar (default; configurable via `setHotkey()`). **Esc** is a global one-shot hide that closes any open dropdown, the Tree panel, and the toolbar in a single press.
+**Level filter dropdown** — Controls which data-ref grammar classes are visible. Three modes: "All" (default — sections, blocks, and elements all shown), "Sec+Blk" (sections and blocks only — element labels hidden), "Sections" (section-level refs only). Independent of Labels, Target, and Outline. Press **F** to cycle. Implemented via `body.sdt-filter-section` / `body.sdt-filter-section-block` CSS classes combined with `sdt-ref-class-{section|block|element|unclassified}` classes stamped on each `[data-ref]` element by `injectLabels()`. Level filter is a third primary control alongside Labels and Target.
+
+**Visibility hotkey** — Press **D** to show / hide the toolbar (default; configurable via `setHotkey()`). **Esc** is a global one-shot hide that closes any open dropdown, the Tree panel, the active-ref tree, and the toolbar in a single press.
 
 ### Why the S mark goes on the left
 
@@ -91,6 +93,39 @@ Labels for refs nested inside `display:none`, `visibility:hidden`, or `opacity:0
 ### Outline guides
 
 Section outlines are intentionally the loudest structural layer: solid orange, thicker stroke, and a faint inset wash to make the page skeleton legible at a glance. Block outlines must remain lighter, dashed, and more schematic so they reveal internal layout without competing with the section layer. On dark sections, both guide types switch to higher-contrast variants automatically; sections use the approved on-dark orange and blocks pick up a lighter guide treatment so they remain visible.
+
+### Level filter dropdown
+
+The Level filter controls which data-ref grammar classes are displayed. It sits as the third primary control — after Labels and Target — because it filters the *type* of work you're looking at, not just the visibility mode. The three options map directly to the data-ref v5.0 grammar levels (§2.1):
+
+- **All** (default) — all classified refs shown; this is the existing SDT behaviour, no change.
+- **Sec+Blk** — section and block refs only; element labels hidden. Useful during structural QA.
+- **Sections** — only top-level section refs shown. Useful for high-level page map reviews.
+
+The filter is applied via CSS body classes (`body.sdt-filter-section`, `body.sdt-filter-section-block`) so it takes effect instantly without DOM mutation. Each `[data-ref]` element receives a `sdt-ref-class-{section|block|element|unclassified}` class from `injectLabels()` that the CSS selectors target.
+
+v4.0 pages (which have only element-class refs) degrade gracefully: "All" shows everything as before; "Sections only" shows nothing — which is valid — because v4.0 pages use element grammar for everything including section wrappers.
+
+### Active-ref tree panel
+
+A lightweight fixed-corner overlay that appears when the cursor enters any SDT label or icon. It shows the full data-ref breadcrumb chain for the hovered element — outermost ancestor first, current element highlighted — so the operator can read the complete section → block → element context without opening the main Tree panel.
+
+The panel is positioned at the **opposite vertical edge** from the toolbar (toolbar at bottom → tree at top; toolbar at top → tree at bottom) so it never overlaps toolbar controls or the Tree panel. Same horizontal side as the toolbar.
+
+Each row in the chain:
+
+- Shows the grammar class (`section`, `block`, `element`) as a muted label
+- Shows the full `data-ref` value in monospace
+- Is click-to-copy (fires `sdt:dataref-click` with the same semantics as a regular label)
+
+A **pin button** in the panel header locks it open. When unpinned, the panel auto-dismisses when the cursor leaves the label (120ms grace period so moving between icon and full-label variants of the same element doesn't flicker). **Esc** (via global hide) dismisses the panel and clears the pin.
+
+The active-ref tree must **not** conflict with the existing Tree button panel:
+
+- Different DOM element (`.sdt-active-ref-tree` vs `.sdt-tree-panel`)
+- Different trigger mechanism (hover vs explicit button click)
+- Different content (breadcrumb context vs full page tree)
+- Different position (opposite vertical edge vs same side as toolbar)
 
 ### Tree panel
 

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<!--
+  Fixture: mixed page — multiple sections, some with blocks, v4.0 legacy refs
+  Tests backward-compatibility with v4.0 pages and all classifier paths.
+  Expected behaviour:
+    - v5.0 section refs: classified section
+    - v5.0 block refs: classified block
+    - v5.0 element refs: classified element
+    - v4.0-style element refs (wrapper-01-01-hero, heading-01-01-primary):
+        classified element — backward-compat per spec §12.5
+    - "unclassified" refs get sdt-ref-class-unclassified + console.warn
+    - hf-services (8 blocks) → block group collapse badge in "All" mode
+    - hf-about (3 blocks) → no collapse
+    - Active-ref tree shows correct chain depth per section type
+    - Level filter "Sections only": hf-header, hf-hero, hf-services, hf-about visible only
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SDT v2.4.0 — Mixed page fixture</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; }
+    [data-ref] { position: relative; padding: 12px; }
+    section   { border: 2px solid #ddd; margin: 12px; padding: 10px; }
+    .block    { border: 1px solid #ea580c33; margin: 6px; padding: 8px; background: #fff7ed; }
+    .element  { border: 1px dashed #aaa; margin: 4px; display: inline-block; padding: 4px; }
+    h2        { margin-top: 0; font-size: 1rem; }
+  </style>
+</head>
+<body>
+
+  <!-- Non-block-bearing section (v5.0) -->
+  <section data-ref="hf-header">
+    <h2>Header</h2>
+    <a class="element" data-ref="hf-header-link-01-01-nav">Nav link 1</a>
+    <a class="element" data-ref="hf-header-link-02-01-nav">Nav link 2</a>
+    <a class="element" data-ref="hf-header-cta-01-01-primary">CTA</a>
+  </section>
+
+  <!-- Non-block-bearing section (v5.0) -->
+  <section data-ref="hf-hero">
+    <h2>Hero</h2>
+    <h1 class="element" data-ref="hf-hero-heading-01-01-primary">Hero headline</h1>
+    <p  class="element" data-ref="hf-hero-text-01-01-body">Hero sub-headline.</p>
+    <a  class="element" data-ref="hf-hero-cta-01-01-primary">Primary CTA</a>
+    <img class="element" data-ref="hf-hero-image-01-01-hero" src="" alt="">
+  </section>
+
+  <!-- Block-bearing section with 8 blocks → collapse in "All" mode -->
+  <section data-ref="hf-services">
+    <h2>Services (8 blocks)</h2>
+    <div class="block" data-ref="hf-services-card-01"><h3 class="element" data-ref="hf-services-heading-01-01-card">Svc 1</h3></div>
+    <div class="block" data-ref="hf-services-card-02"><h3 class="element" data-ref="hf-services-heading-02-01-card">Svc 2</h3></div>
+    <div class="block" data-ref="hf-services-card-03"><h3 class="element" data-ref="hf-services-heading-03-01-card">Svc 3</h3></div>
+    <div class="block" data-ref="hf-services-card-04"><h3 class="element" data-ref="hf-services-heading-04-01-card">Svc 4</h3></div>
+    <div class="block" data-ref="hf-services-card-05"><h3 class="element" data-ref="hf-services-heading-05-01-card">Svc 5</h3></div>
+    <div class="block" data-ref="hf-services-card-06"><h3 class="element" data-ref="hf-services-heading-06-01-card">Svc 6</h3></div>
+    <div class="block" data-ref="hf-services-card-07"><h3 class="element" data-ref="hf-services-heading-07-01-card">Svc 7</h3></div>
+    <div class="block" data-ref="hf-services-card-08"><h3 class="element" data-ref="hf-services-heading-08-01-card">Svc 8</h3></div>
+  </section>
+
+  <!-- Block-bearing section with 3 blocks → no collapse -->
+  <section data-ref="hf-about">
+    <h2>About (3 blocks)</h2>
+    <div class="block" data-ref="hf-about-panel-01">
+      <h3 class="element" data-ref="hf-about-heading-01-01-panel">Panel 1</h3>
+      <p  class="element" data-ref="hf-about-text-01-01-body">Panel 1 body.</p>
+    </div>
+    <div class="block" data-ref="hf-about-panel-02">
+      <h3 class="element" data-ref="hf-about-heading-02-01-panel">Panel 2</h3>
+    </div>
+    <div class="block" data-ref="hf-about-panel-03">
+      <h3 class="element" data-ref="hf-about-heading-03-01-panel">Panel 3</h3>
+    </div>
+  </section>
+
+  <!-- v4.0 legacy refs — should classify as element (backward-compat) -->
+  <section data-ref="mpt-v2-hero-wrapper-01-01-hero" style="border-color:#a855f7">
+    <h2>v4.0 legacy section wrapper ref</h2>
+    <h1 class="element" data-ref="mpt-v2-hero-heading-01-01-primary">v4.0 heading</h1>
+    <p  class="element" data-ref="mpt-v2-hero-text-01-01-body">v4.0 body text.</p>
+  </section>
+
+  <!-- Unclassified / malformed ref — should render with warning class -->
+  <div data-ref="bad--ref" class="element" style="border-color:#ef4444">
+    Malformed data-ref (triggers unclassified + console.warn)
+  </div>
+
+  <script src="../../dist/seguru-debug-toolbar.js"></script>
+  <script>
+    window.seguruDebugConfig = { startHidden: false, defaultMode: 2 };
+  </script>
+</body>
+</html>
