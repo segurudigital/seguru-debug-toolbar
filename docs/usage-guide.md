@@ -64,7 +64,9 @@ Presentation mode is separate from the Off label mode — Off hides labels but k
 
 ## Target control
 
-The **Target** dropdown controls what gets auto-labelled. Click it to select a level, or press **T** to cycle through them. The default is **Elements** — the densest view, useful for full-coverage QA and for AI agents reading the page to generate feedback against every meaningful element. (Pre-2.3 builds called this "Depth" and bound it to `D`; the public API methods `setDepth()` / `getDepth()` keep their names for back-compat.)
+The **Target** dropdown controls what gets auto-labelled. Click it to select a level, or press **T** to cycle through them. Each depth shows **only** its own level's elements — levels do not accumulate. (Pre-2.3 builds called this "Depth" and bound it to `D`; the public API methods `setDepth()` / `getDepth()` keep their names for back-compat.)
+
+> **Note:** Auto-ref is only active when the WordPress plugin (or a `seguruDebugConfig.autoRef = true` config flag) enables it. On a standard embed with manual `data-ref` attributes, changing the Target affects nothing — only manual labels are shown regardless of the selected depth.
 
 ### Off
 
@@ -72,17 +74,21 @@ Only manual `data-ref` attributes and class-converter labels are shown. No auto-
 
 ### Sections
 
-Auto-ref scans for top-level page sections — Elementor containers (`.e-con`), Bricks sections, Oxygen sections, Breakdance sections, and HTML5 `<section>` tags. Best for high-level QA.
+Auto-ref scans **only** for top-level page sections — Elementor containers (`.e-con`), Bricks sections, Oxygen sections, Breakdance sections, and HTML5 `<section>` tags. Best for high-level QA.
 
 ### Blocks
 
-Everything in Sections, plus inner containers, columns, widgets, and content blocks. Shows Elementor widgets, Bricks elements, Gutenberg blocks, etc. Useful for layout debugging.
+Auto-ref scans **only** for inner containers, columns, widgets, and content blocks — Elementor widgets, Bricks elements, Gutenberg blocks, etc. Top-level sections are not included. Useful for layout debugging.
 
 ### Elements
 
-Everything in Sections, plus all semantic HTML — headings (`h1`–`h6`), paragraphs, images, buttons, forms, tables, lists, and builder widgets. The densest view, useful for pinpointing specific elements during debugging.
+Auto-ref scans **only** for semantic HTML — headings (`h1`–`h6`), paragraphs, images, buttons, forms, tables, lists, and builder widget elements. Sections and block containers are not included. The most granular single-level view.
 
 Auto-generated ref names include element context: `home-03-heading` for an Elementor heading widget, `home-05-h2` for a bare `<h2>`, `home-07-cover` for a Gutenberg cover block.
+
+### All
+
+Auto-ref scans all three levels simultaneously — sections, blocks, and elements. This is the default when auto-ref is enabled. Use it for full-coverage QA and for AI agents reading the page to generate feedback against every meaningful element.
 
 ---
 
@@ -155,23 +161,25 @@ console.log(mode); // 0
 
 ### setDepth(depth)
 
-Set the auto-ref depth level. Accepts `'off'`, `'section'`, `'block'`, or `'element'`.
+Set the auto-ref depth level. Accepts `'off'`, `'section'`, `'block'`, `'element'`, or `'all'`.
 
 ```js
-window.seguruDebugToolbar.setDepth('element');  // Label everything
-window.seguruDebugToolbar.setDepth('section');  // Just sections
+window.seguruDebugToolbar.setDepth('all');      // All levels simultaneously
+window.seguruDebugToolbar.setDepth('element');  // Elements only
+window.seguruDebugToolbar.setDepth('block');    // Blocks only
+window.seguruDebugToolbar.setDepth('section');  // Sections only
 window.seguruDebugToolbar.setDepth('off');      // Manual labels only
 ```
 
-Switching depth clears previous auto-ref labels and rescans at the new level.
+Switching depth clears previous auto-ref labels and rescans at the new level. Each level is isolated — selecting `'block'` shows only block-level elements, not sections as well.
 
 ### getDepth()
 
-Returns the current depth level as a string (`'off'`, `'section'`, `'block'`, or `'element'`).
+Returns the current depth level as a string (`'off'`, `'section'`, `'block'`, `'element'`, or `'all'`).
 
 ```js
 var depth = window.seguruDebugToolbar.getDepth();
-console.log(depth); // "section"
+console.log(depth); // "all"
 ```
 
 ### setOutline(mode)

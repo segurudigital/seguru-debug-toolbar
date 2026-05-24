@@ -48,11 +48,12 @@ Auto-ref automatically generates `data-ref` values for major section elements on
 
 **What it detects (varies by depth level):**
 
-| Depth | What gets labelled |
-|-------|-------------------|
-| **Sections** | Top-level containers: `.e-con` (Elementor), `section.brxe-section` (Bricks), `.ct-section` (Oxygen), `.breakdance-section`, HTML5 `<section>` |
-| **Blocks** | Everything in Sections + nested containers, all widgets (`[class*="elementor-widget-"]`, `[class*="brxe-"]`), Gutenberg blocks, `article`, `aside`, `nav` |
-| **Elements** | Everything in Sections + semantic HTML (`h1`–`h6`, `p`, `img`, `button`, `form`, `table`, `ul`, `ol`, etc.) + builder widgets |
+| Target | What gets labelled |
+| ------ | ----------------- |
+| **All** *(default)* | All three levels simultaneously — sections, blocks, and elements. Best for full-coverage QA. |
+| **Sections** | Top-level containers only: `.e-con` (Elementor), `section.brxe-section` (Bricks), `.ct-section` (Oxygen), `.breakdance-section`, HTML5 `<section>`. |
+| **Blocks** | Nested containers and widgets only — sections not included. Covers `[class*="elementor-widget-"]`, `[class*="brxe-"]`, Gutenberg blocks, `article`, `aside`, `nav`. |
+| **Elements** | Semantic HTML only — sections and block containers not included. Covers `h1`–`h6`, `p`, `img`, `button`, `form`, `table`, `ul`, `ol`, and builder widget elements. |
 
 Only modern Elementor is supported (`.e-con` flexbox containers). Legacy `.elementor-section` and `.elementor-column` selectors are not included.
 
@@ -154,4 +155,4 @@ Covered in detail in [wordpress.md](wordpress.md). Quick summary: use a Group bl
 
 **SPA and AJAX content.** If your builder loads sections dynamically (lazy loading, infinite scroll, AJAX pagination), call `window.seguruDebugToolbar.refresh()` after the new content loads. The refresh method re-runs the class converter, auto-ref, and label injection so new sections get picked up.
 
-**Switch target from the toolbar.** You don't need to go back to wp-admin to change which depth gets auto-labelled. Click the **Target** dropdown on the toolbar, or press **T** to cycle through Off → Sections → Blocks → Elements. This is especially useful when debugging — start at Sections for the big picture, then switch to Elements to pinpoint a specific component. (Pre-2.3 builds called this "Depth" and bound it to **D**; the JS API still uses `setDepth()` / `getDepth()` for back-compat.)
+**Switch target from the toolbar.** You don't need to go back to wp-admin to change which depth gets auto-labelled. Click the **Target** dropdown on the toolbar, or press **T** to cycle through Off → Sections → Blocks → Elements → All. This is especially useful when debugging — start at Sections for the big picture, then switch to Elements to pinpoint a specific component, or All for full coverage. (Pre-2.3 builds called this "Depth" and bound it to **D**; the JS API still uses `setDepth()` / `getDepth()` for back-compat.)

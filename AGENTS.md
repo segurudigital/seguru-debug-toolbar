@@ -1,6 +1,6 @@
 # Seguru Debug Toolbar — Agent Context
 
-**Version:** 2.3.1
+**Version:** 2.4.1
 **Repo:** https://github.com/segurudigital/seguru-debug-toolbar
 **Maintained by:** Seguru Digital (hello@seguru.digital)
 **License:** MIT
@@ -200,7 +200,7 @@ Never `git add .` — stage specific files only.
 ## Key behaviours to preserve
 
 - **L key** cycles Labels: Off → Icons → Full
-- **T key** cycles Target depth: Off → Sections → Blocks → Elements (renamed from D in v2.3.0)
+- **T key** cycles Target depth: Off → Sections → Blocks → Elements → All (renamed from D in v2.3.0)
 - **O key** cycles Outline: Off → Sections → Blocks (new in v2.3.0)
 - **D key** (default visibility hotkey, configurable via `setHotkey()`) toggles the toolbar — was `H` pre-2.3.0
 - **Escape** is a global one-shot hide — closes any open dropdown, the Tree panel, and dismisses the toolbar in one press
@@ -211,7 +211,7 @@ Never `git add .` — stage specific files only.
 - **`clearAutoRefs()`** removes auto-generated refs (called on depth change)
 - **`_sdtLabelled` marker** prevents double-injection on refresh
 - **Luminance detection** applies `sdt-on-dark` class to labels on dark backgrounds
-- **Auto-ref defaults ON in v2.3.0** — Target boots at Elements unless `seguruDebugConfig.autoRef = false`. Pre-2.3.x had auto-ref opt-in.
+- **Auto-ref defaults OFF in v2.4.1** — standard embeds need `seguruDebugConfig.autoRef = true` / `'1'`; when enabled, Target boots at All unless `autoRefDepth` overrides it.
 - **Default visibility hotkey changed to `D`** in v2.3.0 — was `H`. Configurable via `setHotkey()` / `data-hotkey` / `init({ hotkey })`.
 
 ---

@@ -4,6 +4,29 @@
 
 ---
 
+## v2.4.1 — Released (QA follow-up)
+
+**Goal:** Stabilise the v2.4 data-ref v5.0 UI after the QA pass: keep isolated Target depths and the new opt-in auto-ref default, while fixing auto-ref Level classification, direct-open fixtures, the demo checkbox state, mobile toolbar wrapping, and release metadata. See `CHANGELOG.md [2.4.1]` for shipped details.
+
+- [x] **Auto-ref Level classes** — auto-generated refs keep legacy public names but receive an internal `data-sdt-auto-level` stamp so Level filtering sees section/block/element correctly.
+- [x] **Fixture load path** — v5 fixture pages load the existing source file and set `seguruDebugConfig` before SDT boots.
+- [x] **Demo default state** — Auto-ref checkbox now matches the v2.4.1 default-off runtime state.
+- [x] **Mobile toolbar wrapping** — toolbar chrome wraps inside narrow viewports with the Level control present.
+- [x] **Packaging** — version metadata synced to 2.4.1 and dist/WP zip rebuilt.
+
+---
+
+## v2.4.0 — Released
+
+**Goal:** Support data-ref v5.0 three-level grammar with a classifier, Level filter dropdown, hover-triggered active-ref context tree, and block group collapse for dense sections. See `CHANGELOG.md [2.4.0]` for full details.
+
+- [x] **Grammar classifier** — `classifyDataRef(ref)` recognises section, block, element, and unclassified refs from tail segments.
+- [x] **Level filter** — Level dropdown and `F` key cycle All / Sec+Blk / Sections using `sdt-ref-class-*` stamps.
+- [x] **Active-ref tree** — hover labels to show the current ref breadcrumb chain, with pin and click-to-copy rows.
+- [x] **Block group collapse** — dense block-bearing sections collapse direct child blocks into a `+N blocks` badge.
+
+---
+
 ## v2.3.1 — Released (this session)
 
 **Goal:** Fix the two ref-label crowding bugs surfaced by the EC cowork session against `https://expeditioncentre.local/Pages/mulgo/mulgo-screen.html` and `home-screen.html`: (1) labels overlaying hidden mega-menu / dropdown panels (`opacity:0` / `visibility:hidden` / `display:none`) intercepting clicks on visible content beneath, including a close-transition race; (2) on dense pages with deeply nested refs, the overlap solver exhausting its lift attempts and leaving piles of stacked labels at the same anchor. See `CHANGELOG.md [2.3.1]` for the full verification probe.

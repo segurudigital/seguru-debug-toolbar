@@ -171,7 +171,7 @@ Drop the minified file into `assets/` and add to `layout/theme.liquid`:
 {% endif %}
 ```
 
-## Default behaviour (as of v2.3.1)
+## Default behaviour (as of v2.4.1)
 
 On page load the toolbar is **hidden** — the script runs, labels are prepared, but nothing is visible. Press **D** to reveal the toolbar + labels. This keeps screenshots, Chrome debug captures, AI-agent browsing sessions, and client demos clean by default. (The visibility hotkey is configurable via `setHotkey()` / `init({ hotkey })` / `data-hotkey="…"`. Pre-2.3 builds used `H` as the default.)
 
@@ -179,7 +179,7 @@ Labels never intercept clicks on hidden content. SDT auto-suppresses labels for 
 
 When revealed, default settings are:
 - **Labels:** Full (every `data-ref` shows its value as a persistent label)
-- **Target:** Elements (densest auto-ref scan; "Target" is the v2.3 rename of "Depth", the JS API still uses `setDepth()` / `getDepth()`)
+- **Target:** Off unless auto-ref is explicitly enabled. When enabled, Target defaults to All (sections, blocks, and elements together); "Target" is the v2.3 rename of "Depth", and the JS API still uses `setDepth()` / `getDepth()`.
 - **Outline:** Off
 - **Theme:** Auto (follows OS `prefers-color-scheme` plus the host's `html.dark` class)
 - **Dock:** Bottom-right
@@ -187,7 +187,7 @@ When revealed, default settings are:
 Keyboard shortcuts (all ignored when focus is in input/textarea/select/contenteditable, and ignored when modifier keys are held):
 - **D** — show / hide the toolbar (configurable visibility hotkey)
 - **L** — cycle label modes: Off → Icons → Full
-- **T** — cycle Target depth: Off → Sections → Blocks → Elements
+- **T** — cycle Target depth: Off → Sections → Blocks → Elements → All
 - **O** — cycle Outline guides: Off → Sections → Blocks
 - **Esc** — global one-shot hide (closes any open dropdown, the Tree panel, and the toolbar in a single press)
 
@@ -202,9 +202,9 @@ If a specific page needs different defaults (e.g. the toolbar visible on load fo
   window.seguruDebugConfig = {
     startHidden: false,       // default true — set false to load visible
     defaultMode: 2,           // 0=Icons, 1=Off, 2=Full
-    autoRefDepth: 'element',  // 'off' | 'section' | 'block' | 'element'
+    autoRefDepth: 'all',      // 'off' | 'section' | 'block' | 'element' | 'all'
     outlineMode: 'off',       // 'off' | 'section' | 'block'
-    autoRef: false,           // default true (auto-ref ON) — set false to disable
+    autoRef: false,           // default false (auto-ref OFF) — set true to enable
     hotkey: 'V',              // default 'D' — single letter A-Z, or false to disable
     theme: 'auto',            // 'auto' | 'light' | 'dark'
     dock: 'bottom-right',     // bottom-right | bottom-left | top-right | top-left | auto

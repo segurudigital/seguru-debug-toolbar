@@ -85,7 +85,7 @@ The plugin adds its own settings page at **Settings → Debug Toolbar** with fiv
 **Page Builders** — Two toggles that speed up `data-ref` rollout across page builders:
 
 - **Class-to-ref converter** — Converts CSS classes prefixed with `dataref-` into `data-ref` attributes on page load. Works with every page builder (including free tiers) because they all support CSS classes. Add `dataref-home-01-hero` as a class and it becomes `data-ref="home-01-hero"`.
-- **Auto-ref** — Automatically generates `data-ref` values for major section elements based on page slug and position. Detects Elementor, Bricks, Oxygen, Breakdance, and standard `<section>` tags. Sections with existing `data-ref` values (manual or from the class converter) keep their names.
+- **Auto-ref** — Automatically generates `data-ref` values for major section elements based on page slug and position. Detects Elementor, Bricks, Oxygen, Breakdance, and standard `<section>` tags. Sections with existing `data-ref` values (manual or from the class converter) keep their names. Auto-ref is **off by default** in the toolbar itself — this WP setting is the primary way to enable it. The default Target depth when auto-ref is enabled is **All** (sections, blocks, and elements simultaneously).
 
 See [page-builders.md](page-builders.md) for the full guide.
 

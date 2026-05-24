@@ -10,6 +10,30 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This pr
 
 ---
 
+## [2.4.1] — 2026-05-23
+
+Patch release fixing three regressions introduced in v2.4.0, plus an isolated-depth feature for the Target control and a breaking change to auto-ref defaults.
+
+### Fixed
+
+- **`clearAutoRefs()` subtree bug — nested manual refs permanently lost their labels after any T-key depth cycle.** The previous implementation used `querySelectorAll('sdt-ref-icon, sdt-ref-tooltip, …')` on each auto-ref element, which descended into children and removed label nodes belonging to nested manual `[data-ref]` elements. Those nested elements kept their `_sdtLabelled` MARKER, so `injectLabels()` treated them as already processed and never recreated the labels. Replaced the subtree query with a direct-child iteration (`el.childNodes`) that only removes label nodes that are immediate children of the auto-ref element being cleared.
+- **Nav and mega menu `data-ref` elements missing on init.** Some WordPress themes (including the EC theme) stamp `data-ref` attributes onto header nav and mega menu elements after `DOMContentLoaded`, meaning they were invisible to the initial `injectLabels()` pass. Fixed by adding `lateRescan()`: an idempotent pass that runs on `window.load` (with `requestAnimationFrame` fallback when `readyState === 'complete'` at init time). The pass checks whether any unlabelled `[data-ref]` elements exist and, if so, runs `convertClassRefs()`, `autoRefSections()`, `injectLabels()`, `resolveLabelOverlaps()`, and `buildTreePanel()`. Fully idempotent — existing labels are never duplicated.
+- **Auto-generated refs now receive the correct Level class.** Legacy auto-ref names like `page-01-h2` do not carry enough v5 grammar to classify as elements, so `injectLabels()` was stamping every auto-generated ref as `sdt-ref-class-section`. Auto-ref now stores an internal `data-sdt-auto-level` stamp (`section` / `block` / `element`) and uses that for Level filtering while keeping the public `data-ref` value unchanged.
+- **v5 fixture pages load correctly when opened directly.** The fixture pages now set `seguruDebugConfig` before loading the toolbar and point at the existing source file rather than the non-existent `dist/seguru-debug-toolbar.js` dev bundle.
+- **Demo auto-ref checkbox reflects the v2.4.1 default.** With no URL params, the Auto-ref checkbox is now unchecked to match the runtime default of Target Off.
+- **Toolbar fits narrow mobile viewports with the Level control present.** Toolbar chrome now wraps within the viewport instead of overflowing off-screen on 375px-wide screens.
+
+### Added
+
+- **Isolated target depths** — each Target level now shows only its own depth's auto-ref elements, not an accumulated superset. Previously Blocks included all section selectors, and Elements included all section + block selectors. The selector lists are now split into `SELECTORS_SECTION`, `SELECTORS_BLOCK_ONLY`, and `SELECTORS_ELEMENT_ONLY`; each depth uses its own isolated list. `AUTO_REF_DEPTH_MAP` maps each depth key to its isolated selector list.
+- **"All" target depth** — new `DEPTH_CYCLE` value `'all'` (displayed as "All — sections, blocks & elements") that shows all three levels simultaneously. Added to the depth dropdown above Elements and to the `T`-key cycle. `SELECTORS_ALL` is the concatenation of all three isolated lists. The default `autoRefDepth` when auto-ref is enabled is now `'all'` (was `'element'`).
+
+### Changed
+
+- **Auto-ref is now OFF by default (breaking).** Previously auto-ref was opt-out: it was enabled unless `sdtConfig.autoRef === '0'` or `false`. It is now opt-in: it is only enabled when `sdtConfig.autoRef === '1'` or `true`. Standard embeds that relied on auto-tagging need to explicitly set `seguruDebugConfig.autoRef = true`; WordPress sites enable it through Settings → Debug Toolbar → Page Builders. Pages that use manual `data-ref` attributes are unaffected.
+
+---
+
 ## [2.4.0] — 2026-05-23
 
 Support for data-ref v5.0 three-level grammar (section / block / element). Four deliverables: a grammar classifier baked into `injectLabels`, a Level filter dropdown, a hover-triggered active-ref context tree, and block group collapse for dense sections.

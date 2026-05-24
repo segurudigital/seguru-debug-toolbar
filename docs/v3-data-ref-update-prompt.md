@@ -1,10 +1,12 @@
 # Claude Code prompt — SDT update for data-ref v5.0 / Titan v3.0
 
+**Status:** ✅ **Shipped 2026-05-23 as SDT v2.4.0.** All four deliverables (classifier, level filter, active-ref tree, block group collapse) implemented. This file is preserved as historic reference. See `CHANGELOG.md` v2.4.0 entry for the actual ship details.
+
 **Created:** 2026-05-23
 **Owner:** Samuel Clarke
 **Project:** Seguru Debug Toolbar
-**Target version:** SDT v2.4.0 (or v3.0.0 if scope grows)
-**Related spec:** `Seguru-Ops/00_Core/Titan/Specifications/data-ref-spec.md` v5.0 (§12 in particular)
+**Shipped as:** SDT v2.4.0
+**Related spec:** `Seguru-Ops/00_Core/Titan/Specifications/data-ref-spec.md` v5.0 (§12 in particular, §12.7 for shipped surface)
 
 ---
 

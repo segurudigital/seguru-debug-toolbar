@@ -27,9 +27,10 @@ Add `data-ref` attributes to any HTML element. The toolbar gives you four dropdo
 | Target | What gets labelled |
 |--------|--------------------|
 | **Off** | Only your manual `data-ref` attributes and class-converter labels. |
-| **Sections** | Top-level page sections (Elementor containers, Bricks sections, HTML5 `<section>` tags). |
-| **Blocks** | Sections + inner containers, widgets, and content blocks. |
-| **Elements** *(default)* | Sections + all semantic HTML (headings, paragraphs, images, buttons, forms, etc.). |
+| **Sections** | Top-level page sections only (Elementor containers, Bricks sections, HTML5 `<section>` tags). |
+| **Blocks** | Inner containers, widgets, and content blocks only — sections not included. |
+| **Elements** | Semantic HTML only (headings, paragraphs, images, buttons, forms, etc.) — sections and blocks not included. |
+| **All** *(default when auto-ref is on)* | All three levels simultaneously — sections, blocks, and elements. |
 
 **Level** (press **F** to cycle) — controls which data-ref grammar levels are shown. Requires data-ref v5.0 naming; v4.0 pages degrade gracefully (see [v5.0 data-ref support](#v50-data-ref-support)):
 
@@ -83,7 +84,7 @@ We use it for wireframe QA, copy review, client revision rounds, and debugging b
 
 ## Install
 
-Current version: **v2.4.0** — see [CHANGELOG.md](CHANGELOG.md) for release notes.
+Current version: **v2.4.1** — see [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 **npm (React, Next, Vue, Svelte, any bundled app):**
 
@@ -223,7 +224,7 @@ The full keymap, all bound at the document level:
 |-----|--------|
 | `D` | Show / hide the toolbar (configurable — see below) |
 | `L` | Cycle **Labels** mode: Off → Icons → Full |
-| `T` | Cycle **Target** depth: Off → Sections → Blocks → Elements |
+| `T` | Cycle **Target** depth: Off → Sections → Blocks → Elements → All |
 | `O` | Cycle **Outline** mode: Off → Sections → Blocks |
 | `F` | Cycle **Level** filter: All → Sec+Blk → Sections |
 | `Esc` | **Global hide** — closes any open dropdown, the Tree panel, the active-ref tree, and dismisses the toolbar in one press |
@@ -349,7 +350,7 @@ window.addEventListener('sdt:dataref-leave',   (e) => { /* e.detail = { dataRef,
 | `sdt:show` | Toolbar revealed (`show()`, `toggle()`, or hotkey) | `{}` |
 | `sdt:hide` | Toolbar dismissed (`hide()`, `toggle()`, hotkey, or Esc) | `{}` |
 | `sdt:theme-change` | Resolved theme changed — including OS-driven flips while in `auto` | `{ theme, mode }` where `theme ∈ {'light','dark'}` and `mode` is the requested mode |
-| `sdt:depth-change` | `setDepth()` called | `{ depth }` where `depth ∈ {'off','section','block','element'}` |
+| `sdt:depth-change` | `setDepth()` called | `{ depth }` where `depth ∈ {'off','section','block','element','all'}` |
 | `sdt:outline-change` | `setOutline()` called | `{ outline }` where `outline ∈ {'off','section','block'}` |
 | `sdt:user-change` | `setUser()` called | `{ user }` (cloned snapshot, not the raw object you handed in) |
 | `sdt:dataref-click` | User clicked an SDT label / icon for a `[data-ref]` element | `{ dataRef, element, current }` |
@@ -445,7 +446,7 @@ The toolbar only loads for administrators, so regular site visitors never see it
 - **SPA-friendly** — call `refresh()` after dynamic content loads
 - **WordPress plugin included** — installable zip or mu-plugin, admin-only, dedicated settings page
 - **Class-to-ref converter** — add `dataref-` CSS classes in any page builder (including free tiers) and they become `data-ref` attributes
-- **Auto-ref with Target control** — three target levels (Sections / Blocks / Elements) switchable from the toolbar or with the **T** key, zero manual tagging. Defaults to Elements out of the box.
+- **Auto-ref with Target control** — four target choices (Sections / Blocks / Elements / All) switchable from the toolbar or with the **T** key. Auto-ref is opt-in for standard embeds and defaults to All when enabled.
 - **Smart element context** — auto-ref names include widget types (e.g. `home-03-heading` instead of `home-03-div`)
 - **Page builder support** — modern Elementor, Bricks, Oxygen, Breakdance, Gutenberg
 - **Works everywhere** — static HTML, React, Vue, WordPress, Shopify, anything with a DOM

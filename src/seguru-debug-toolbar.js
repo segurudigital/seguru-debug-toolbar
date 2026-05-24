@@ -14,12 +14,14 @@
  *   1 = Off     — nothing shown, clean view for screenshots
  *   2 = Full    — always-visible text labels on every element (default)
  *
- * Press H to toggle presentation mode: hides toolbar + all labels.
+ * Press D to toggle presentation mode: hides toolbar + all labels.
  *   By default the toolbar loads in presentation mode (hidden) so it stays
- *   out of screenshots, AI/Chrome debug sessions, and client demos. Press H
+ *   out of screenshots, AI/Chrome debug sessions, and client demos. Press D
  *   to reveal the toolbar and labels. Override with seguruDebugConfig.startHidden = false.
- * Press D to cycle auto-ref depth: Off → Sections → Blocks → Elements.
- *   Default depth is Elements for the densest debugging view.
+ * Press T to cycle auto-ref depth: Off → Sections → Blocks → Elements → All.
+ *   Each depth shows only that level's auto-refs; All shows every level simultaneously.
+ *   Auto-ref is OFF by default; enabled via the WordPress plugin (sdtConfig.autoRef)
+ *   or explicitly with seguruDebugConfig.autoRef = true.
  * Use Outline to show section/block boundaries for spacing QA (off by default).
  *
  * Click any label to copy the data-ref value to clipboard.
@@ -27,7 +29,7 @@
  * Programmatic API:
  *   window.seguruDebugToolbar.setState(0|1|2)
  *   window.seguruDebugToolbar.getState()
- *   window.seguruDebugToolbar.setDepth('off'|'section'|'block'|'element')
+ *   window.seguruDebugToolbar.setDepth('off'|'section'|'block'|'element'|'all')
  *   window.seguruDebugToolbar.getDepth()
  *   window.seguruDebugToolbar.setOutline('off'|'section'|'block')
  *   window.seguruDebugToolbar.getOutline()
@@ -40,7 +42,7 @@
   // Single source of truth for the bundled version string. Exposed via
   // `seguruDebugToolbar.version` and emitted in the `sdt:ready` event detail.
   // Kept in sync with package.json on release.
-  var SDT_VERSION = '2.4.0';
+  var SDT_VERSION = '2.4.1';
 
   // ─── Configuration ──────────────────────────────────────────
   var ACCENT = '234, 88, 12';        // orange — functional UI accent
@@ -99,6 +101,27 @@
       return 'section';
     }
     return 'unclassified';
+  }
+
+  function clearDataRefClass(el) {
+    var classNames = [
+      'sdt-ref-class-section',
+      'sdt-ref-class-block',
+      'sdt-ref-class-element',
+      'sdt-ref-class-unclassified'
+    ];
+    for (var i = 0; i < classNames.length; i++) {
+      el.classList.remove(classNames[i]);
+    }
+  }
+
+  function normalizeRefClass(refClass) {
+    return (
+      refClass === 'section' ||
+      refClass === 'block' ||
+      refClass === 'element' ||
+      refClass === 'unclassified'
+    ) ? refClass : 'unclassified';
   }
 
   // Seguru S mark — inline SVG derived from Seguru-Favicon-Blue.svg
@@ -196,12 +219,11 @@
 
   // Feature flags
   var classConverterEnabled = config.classConverter === '1' || config.classConverter === true;
-  // Auto-ref is now ON by default — Target boots at Elements so every meaningful
-  // element on the page is labelled without manual tagging. Pre-2.3 builds had
-  // auto-ref opt-in (`autoRef: true` to enable). Existing hosts that want the
-  // old behaviour can set `seguruDebugConfig.autoRef = false` (or `'0'`).
-  var autoRefEnabled = !(config.autoRef === '0' || config.autoRef === false);
-  var autoRefDepth = config.autoRefDepth || 'element'; // section | block | element (default element)
+  // Auto-ref is OFF by default — only the WordPress plugin sets autoRef: true
+  // via sdtConfig (wp_localize_script). Standard hosts label elements manually
+  // with data-ref; auto-tagging is opt-in via seguruDebugConfig.autoRef = true.
+  var autoRefEnabled = config.autoRef === '1' || config.autoRef === true;
+  var autoRefDepth = config.autoRefDepth || 'all'; // section | block | element | all (default all)
   var outlineMode = config.outlineMode || 'off'; // off | section | block
   var levelFilter = config.levelFilter || 'all'; // all | section | section-block
 
@@ -793,8 +815,10 @@
     '  z-index: 99999;',
     '  display: flex;',
     '  align-items: center;',
+    '  flex-wrap: wrap;',
     '  gap: 6px;',
     '  padding: 4px;',
+    '  max-width: calc(100vw - 40px);',
     '  background: #fff;',
     '  border: 1px solid #E5E7EB;',
     '  border-radius: 6px;',
@@ -812,6 +836,7 @@
     '  box-sizing: border-box;',
     '  display: flex;',
     '  align-items: center;',
+    '  flex-wrap: wrap;',
     '  gap: 4px;',
     '}',
 
@@ -820,6 +845,7 @@
     '  box-sizing: border-box;',
     '  display: flex;',
     '  align-items: center;',
+    '  flex-wrap: wrap;',
     '  gap: 4px;',
     '  padding-right: 6px;',
     '  margin-right: 2px;',
@@ -1584,11 +1610,11 @@
 
   // ─── Mode + depth display labels ─────────────────────────────
   var MODE_LABELS = { 0: 'Icons', 1: 'Off', 2: 'Full' };
-  var DEPTH_LABELS = { 'off': 'Off', 'section': 'Sections', 'block': 'Blocks', 'element': 'Elements' };
+  var DEPTH_LABELS = { 'off': 'Off', 'section': 'Sections', 'block': 'Blocks', 'element': 'Elements', 'all': 'All' };
   var OUTLINE_LABELS = { 'off': 'Off', 'section': 'Sections', 'block': 'Blocks' };
   var LEVEL_LABELS = { 'all': 'All', 'section': 'Sections', 'section-block': 'Sec+Blk' };
   var initModeLabel = MODE_LABELS[state] || 'Icons';
-  var initDepthLabel = autoRefEnabled ? (DEPTH_LABELS[autoRefDepth] || 'Sections') : 'Off';
+  var initDepthLabel = autoRefEnabled ? (DEPTH_LABELS[autoRefDepth] || 'All') : 'Off';
   var initOutlineLabel = OUTLINE_LABELS[outlineMode] || 'Off';
   var initLevelFilterLabel = LEVEL_LABELS[levelFilter] || 'All';
 
@@ -1640,14 +1666,17 @@
         '</button>' +
         '<div class="sdt-toolbar__dropdown" data-sdt-menu="depth">' +
           '<div class="sdt-toolbar__hint">Press T to cycle</div>' +
+          '<button class="sdt-toolbar__option' + (autoRefEnabled && autoRefDepth === 'all' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="all">' +
+            '<span class="sdt-toolbar__option-dot"></span> All — sections, blocks &amp; elements' +
+          '</button>' +
           '<button class="sdt-toolbar__option' + (autoRefEnabled && autoRefDepth === 'element' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="element">' +
-            '<span class="sdt-toolbar__option-dot"></span> Elements — headings, text, images, buttons' +
+            '<span class="sdt-toolbar__option-dot"></span> Elements — headings, text, images, buttons only' +
           '</button>' +
           '<button class="sdt-toolbar__option' + (autoRefEnabled && autoRefDepth === 'block' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="block">' +
-            '<span class="sdt-toolbar__option-dot"></span> Blocks — sections + containers' +
+            '<span class="sdt-toolbar__option-dot"></span> Blocks — containers only' +
           '</button>' +
           '<button class="sdt-toolbar__option' + (autoRefEnabled && autoRefDepth === 'section' ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="section">' +
-            '<span class="sdt-toolbar__option-dot"></span> Sections — top-level page sections' +
+            '<span class="sdt-toolbar__option-dot"></span> Sections — top-level page sections only' +
           '</button>' +
           '<button class="sdt-toolbar__option' + (!autoRefEnabled ? ' sdt-toolbar__option--active' : '') + '" data-sdt-depth="off">' +
             '<span class="sdt-toolbar__option-dot"></span> Off — manual labels only' +
@@ -1751,7 +1780,9 @@
     '#content > div > section'
   ];
 
-  var SELECTORS_BLOCK = SELECTORS_SECTION.concat([
+  // Block-level selectors (containers / widgets) — does NOT include section
+  // selectors so that "Blocks" target shows only blocks, not sections too.
+  var SELECTORS_BLOCK_ONLY = [
     '.e-con .e-con',
     '[class*="elementor-widget-"]',
     '.brxe-block', '.brxe-div',
@@ -1764,9 +1795,11 @@
     '.wp-block-group', '.wp-block-column', '.wp-block-columns',
     '.wp-block-cover', '.wp-block-media-text',
     '[class*="wp-block-"]'
-  ]);
+  ];
 
-  var SELECTORS_ELEMENT = SELECTORS_SECTION.concat([
+  // Element-level selectors (leaf / inline content) — does NOT include section
+  // or block selectors so that "Elements" target shows only leaf items.
+  var SELECTORS_ELEMENT_ONLY = [
     'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
     'p', 'blockquote', 'figure', 'figcaption', 'img', 'video', 'audio',
     'a[href]', 'button', 'input', 'select', 'textarea',
@@ -1778,13 +1811,32 @@
     '.ct-text-block', '.ct-headline', '.ct-image', '.ct-button',
     '.ct-link-text', '.ct-video', '.ct-icon', '.ct-fancy-image',
     '[class*="breakdance-"]'
-  ]);
+  ];
+
+  // "All" — every level combined (the previous "element" accumulated behaviour).
+  var SELECTORS_ALL = SELECTORS_SECTION.concat(SELECTORS_BLOCK_ONLY).concat(SELECTORS_ELEMENT_ONLY);
 
   var AUTO_REF_DEPTH_MAP = {
     'section': SELECTORS_SECTION,
-    'block':   SELECTORS_BLOCK,
-    'element': SELECTORS_ELEMENT
+    'block':   SELECTORS_BLOCK_ONLY,
+    'element': SELECTORS_ELEMENT_ONLY,
+    'all':     SELECTORS_ALL
   };
+
+  function matchesSelectorList(el, selectorList) {
+    for (var i = 0; i < selectorList.length; i++) {
+      if (matchesSelector(el, selectorList[i])) return true;
+    }
+    return false;
+  }
+
+  function getAutoRefLevel(el, depthMode) {
+    if (depthMode === 'section' || depthMode === 'block' || depthMode === 'element') return depthMode;
+    if (matchesSelectorList(el, SELECTORS_SECTION)) return 'section';
+    if (matchesSelectorList(el, SELECTORS_BLOCK_ONLY)) return 'block';
+    if (matchesSelectorList(el, SELECTORS_ELEMENT_ONLY)) return 'element';
+    return 'unclassified';
+  }
 
   function collectTargetsByDepth(depthMode) {
     var selectorList = AUTO_REF_DEPTH_MAP[depthMode] || SELECTORS_SECTION;
@@ -2030,6 +2082,7 @@
         if (num.length < 2) num = '0' + num;
         el.setAttribute('data-ref', slug + '-' + num + '-' + getElementContext(el));
         el.setAttribute('data-sdt-auto', '1');
+        el.setAttribute('data-sdt-auto-level', getAutoRefLevel(el, autoRefDepth));
       }
     }
   }
@@ -2041,8 +2094,26 @@
     forEachNode(autoEls, function (el) {
       el.removeAttribute('data-ref');
       el.removeAttribute('data-sdt-auto');
-      var labels = el.querySelectorAll('.sdt-ref-link, .sdt-ref-icon, .sdt-ref-tooltip, .sdt-ref-full-label');
-      forEachNode(labels, function (label) { label.remove(); });
+      el.removeAttribute('data-sdt-auto-level');
+      clearDataRefClass(el);
+      // Remove only DIRECT CHILD label nodes. A subtree querySelectorAll would
+      // also reach labels belonging to nested [data-ref] elements, removing them
+      // while leaving their _sdtLabelled MARKER intact — so injectLabels() would
+      // skip re-creating them, leaving those refs permanently unlabelled after
+      // any T-key depth cycle that passes through a depth with auto-refs.
+      var i, child;
+      for (i = el.childNodes.length - 1; i >= 0; i--) {
+        child = el.childNodes[i];
+        if (child.nodeType !== 1) continue;
+        if (
+          child.classList.contains('sdt-ref-link') ||
+          child.classList.contains('sdt-ref-icon') ||
+          child.classList.contains('sdt-ref-tooltip') ||
+          child.classList.contains('sdt-ref-full-label')
+        ) {
+          el.removeChild(child);
+        }
+      }
       delete el[MARKER];
       delete el._sdtIcon;
       delete el._sdtLink;
@@ -2054,7 +2125,7 @@
 
 
   // ─── Depth management ──────────────────────────────────────
-  var DEPTH_CYCLE = ['off', 'section', 'block', 'element'];
+  var DEPTH_CYCLE = ['off', 'section', 'block', 'element', 'all'];
 
   function setDepth(newDepth) {
     if (newDepth === 'off') {
@@ -2507,7 +2578,8 @@
       // Classify by data-ref v5.0 grammar and stamp the class on the
       // element so CSS level-filter rules and block group collapse can
       // target it without re-running the parser.
-      var refClass = classifyDataRef(refValue);
+      var refClass = normalizeRefClass(el.getAttribute('data-sdt-auto-level') || classifyDataRef(refValue));
+      clearDataRefClass(el);
       el.classList.add('sdt-ref-class-' + refClass);
       if (refClass === 'unclassified' && typeof console !== 'undefined' && console.warn) {
         console.warn('[seguru-debug-toolbar] unclassified data-ref:', refValue);
@@ -2731,7 +2803,7 @@
 
   function buildTreePanel() {
     var refs = toArray(document.querySelectorAll('[data-ref]'));
-    var depthLabel = autoRefEnabled ? (DEPTH_LABELS[autoRefDepth] || 'Sections') : 'Off';
+    var depthLabel = autoRefEnabled ? (DEPTH_LABELS[autoRefDepth] || 'All') : 'Off';
     var outlineLabel = OUTLINE_LABELS[outlineMode] || 'Off';
 
     clearTreeHoverHighlights();
@@ -3483,7 +3555,7 @@
         return;
       }
 
-      // T — cycle Target / Depth (Off → Sections → Blocks → Elements)
+      // T — cycle Target / Depth (Off → Sections → Blocks → Elements → All)
       if (e.key === 't' || e.key === 'T') {
         var depthIdx = autoRefEnabled ? DEPTH_CYCLE.indexOf(autoRefDepth) : 0;
         var nextDepthIdx = (depthIdx + 1) % DEPTH_CYCLE.length;
@@ -3565,6 +3637,36 @@
         scheduleVisibilityRecheck();
       }
     }, true);
+
+    // Late data-ref re-scan — some hosts (WordPress blocks, page builders,
+    // inline scripts) inject or stamp `data-ref` attributes after
+    // DOMContentLoaded, so the initial injectLabels() call misses them.
+    // A second pass on window.load is idempotent: injectLabels() skips
+    // elements that already have the MARKER, so only genuinely new refs
+    // are processed. The early-return check avoids the layout work entirely
+    // when nothing new was added.
+    // When the script is loaded after window.load has already fired
+    // (e.g. dynamically injected), fall back to a rAF so at least
+    // synchronous post-init stamps are caught.
+    function lateRescan() {
+      var refs = document.querySelectorAll('[data-ref]');
+      var hasNew = false;
+      forEachNode(refs, function (el) {
+        if (!el[MARKER]) hasNew = true;
+      });
+      if (!hasNew) return;
+      convertClassRefs();
+      if (autoRefEnabled) autoRefSections();
+      injectLabels();
+      resolveLabelOverlaps();
+      if (treeOpen) buildTreePanel();
+    }
+    if (document.readyState === 'complete') {
+      var _lateRaf = window.requestAnimationFrame || function (cb) { setTimeout(cb, 0); };
+      _lateRaf(lateRescan);
+    } else {
+      window.addEventListener('load', lateRescan);
+    }
 
     emitEvent('ready', { version: SDT_VERSION });
   }

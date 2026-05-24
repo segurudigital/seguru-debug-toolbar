@@ -107,10 +107,10 @@
       if (arParam !== null) window.seguruDebugConfig.autoRef        = arParam === '1' ? '1' : '0';
 
       // Sync checkboxes after DOM loads. With no URL param, the checkbox
-      // reflects the SDT default (classConverter=off, autoRef=on as of v2.3).
+      // reflects the SDT default (classConverter=off, autoRef=off as of v2.4.1).
       document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('toggle-cc').checked = ccParam === '1';
-        document.getElementById('toggle-ar').checked = arParam === null ? true : (arParam === '1');
+        document.getElementById('toggle-ar').checked = arParam === null ? false : (arParam === '1');
 
         document.getElementById('toggle-cc').addEventListener('change', function () {
           params.set('cc', this.checked ? '1' : '0');
